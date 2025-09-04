@@ -1,0 +1,27 @@
+{
+  "name": "tidal-ai-playlist",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "[![Package Version](https://img.shields.io/hexpm/v/tidal_ai_playlist)](https://hex.pm/packages/tidal_ai_playlist) [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/tidal_ai_playlist/)",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cammellos/tidal-ai-playlist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cammellos/tidal-ai-playlist/issues"
+  },
+  "homepage": "https://github.com/cammellos/tidal-ai-playlist#readme",
+  "dependencies": {
+    "left-pad": "^1.3.0"
+  }
+}
