@@ -1,11 +1,11 @@
 import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request
-import gleam/httpc
 import gleam/json
-import gleam/list
 import gleam/option
-import gleam/string
+import tidal_ai_playlist/internal/errors
+import tidal_ai_playlist/internal/http as tidal_http
+import tidal_ai_playlist/internal/json as tidal_json
 
 const host = "api.openai.com"
 
@@ -13,12 +13,6 @@ const responses_path = "/v1/responses"
 
 pub type Config {
   Config(model: Model, instructions: String, api_key: String)
-}
-
-pub type OpenAIError {
-  HttpError(String)
-  ParseError(String)
-  OtherError(String)
 }
 
 pub type Model {
@@ -40,27 +34,24 @@ pub type Response {
   Response(id: String, output: List(Output))
 }
 
-pub type Sender =
-  fn(request.Request(String)) -> Result(String, OpenAIError)
-
 pub fn responses(
   input: String,
   config: Config,
-  sender: option.Option(Sender),
-) -> Result(Response, OpenAIError) {
-  let actual_sender = option.unwrap(sender, default_sender)
+  sender: option.Option(tidal_http.Sender),
+) -> Result(Response, errors.TidalError) {
+  let actual_sender = option.unwrap(sender, tidal_http.default_sender)
   responses_with_sender(input, config, actual_sender)
 }
 
 pub fn responses_with_sender(
   input: String,
   config: Config,
-  sender: Sender,
-) -> Result(Response, OpenAIError) {
+  sender: tidal_http.Sender,
+) -> Result(Response, errors.TidalError) {
   let req = build_request(input, config)
 
   case sender(req) {
-    Ok(body) -> decode_response(body)
+    Ok(response) -> decode_response(response.body)
     Error(err) -> Error(err)
   }
 }
@@ -74,37 +65,13 @@ pub fn model_to_string(model: Model) -> String {
   }
 }
 
-fn default_sender(req: request.Request(String)) -> Result(String, OpenAIError) {
-  case httpc.send(req) {
-    Ok(resp) -> Ok(resp.body)
-    Error(err) -> Error(HttpError("Failed: " <> http_error_to_string(err)))
-  }
-}
-
-fn http_error_to_string(error: httpc.HttpError) -> String {
-  case error {
-    httpc.InvalidUtf8Response -> "invalid utf8 response"
-    httpc.ResponseTimeout -> "response timeout"
-    httpc.FailedToConnect(_, _) -> "failed to connect"
-  }
-}
-
-fn json_error_to_string(error: json.DecodeError) -> String {
-  case error {
-    json.UnexpectedEndOfInput -> "unexpected end of input"
-    json.UnexpectedByte(byte) -> "unexpected byte " <> byte
-    json.UnexpectedSequence(seq) -> "unexpected sequence " <> seq
-    json.UnableToDecode(errors) ->
-      "unable to decode "
-      <> string.join(list.map(errors, decode_error_to_string), ",")
-  }
-}
-
-fn decode_response(body: String) -> Result(Response, OpenAIError) {
+fn decode_response(body: String) -> Result(Response, errors.TidalError) {
   case json.parse(from: body, using: response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->
-      Error(ParseError("Failed to parse json: " <> json_error_to_string(err)))
+      Error(errors.ParseError(
+        "Failed to parse json: " <> tidal_json.error_to_string(err),
+      ))
   }
 }
 
@@ -125,18 +92,6 @@ fn build_request(input: String, config: Config) -> request.Request(String) {
   |> request.prepend_header("Authorization", "Bearer " <> config.api_key)
   |> request.prepend_header("Content-Type", "application/json")
   |> request.set_body(body)
-}
-
-fn decode_error_to_string(error: decode.DecodeError) -> String {
-  case error {
-    decode.DecodeError(expected, found, path) ->
-      "expected "
-      <> expected
-      <> " found "
-      <> found
-      <> " path "
-      <> string.join(path, "-->")
-  }
 }
 
 fn content_decoder() -> decode.Decoder(Content) {

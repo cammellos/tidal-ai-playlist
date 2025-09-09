@@ -1,5 +1,7 @@
 import gleam/option
 import gleeunit
+import tidal_ai_playlist/internal/errors
+import tidal_ai_playlist/internal/http
 import tidal_ai_playlist/internal/openai
 
 pub fn main() -> Nil {
@@ -29,7 +31,9 @@ pub fn responses_with_sender_returns_decoded_response_test() {
       }
       "
 
-  let fake_sender: openai.Sender = fn(_req) { Ok(fake_body) }
+  let fake_sender: http.Sender = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body))
+  }
 
   let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
 
@@ -46,22 +50,24 @@ pub fn responses_with_sender_returns_decoded_response_test() {
 pub fn responses_with_sender_malformed_test() {
   let fake_body = "malformed"
 
-  let fake_sender: openai.Sender = fn(_req) { Ok(fake_body) }
+  let fake_sender: http.Sender = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body))
+  }
 
   let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
 
   let response =
     openai.responses("input text", config, option.Some(fake_sender))
-  assert Error(openai.ParseError("Failed to parse json: unexpected byte 0x6D"))
+  assert Error(errors.ParseError("Failed to parse json: unexpected byte 0x6D"))
     == response
 }
 
 pub fn responses_with_sender_propagates_http_errors_test() {
-  let fake_sender: openai.Sender = fn(_req) {
-    Error(openai.HttpError("network down"))
+  let fake_sender: http.Sender = fn(_req) {
+    Error(errors.HttpError("network down"))
   }
   let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
 
   let response = openai.responses_with_sender("input text", config, fake_sender)
-  assert response == Error(openai.HttpError("network down"))
+  assert response == Error(errors.HttpError("network down"))
 }
