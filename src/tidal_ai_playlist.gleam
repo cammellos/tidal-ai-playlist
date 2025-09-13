@@ -7,7 +7,9 @@ import gleam/result
 import gleam/string
 import input
 import tidal_ai_playlist/internal/errors
-import tidal_ai_playlist/internal/openai
+import tidal_ai_playlist/internal/openai/api as openai_api
+import tidal_ai_playlist/internal/openai/config as openai_config
+import tidal_ai_playlist/internal/openai/types as openai_types
 import tidal_ai_playlist/internal/tidal
 import tidal_ai_playlist/internal/tidal_api
 
@@ -23,9 +25,6 @@ Wrap the playlist between exactly these separator lines:
 
 pub fn main() -> Nil {
   let assert Ok(playlist) = interactive_playlist()
-  //io.println("What would you like to listen to?")
-  //let assert Ok(prompt) = input.input(prompt: "> ")
-  //let assert Ok(playlist) = generate_playlist(prompt)
   let refresh_token =
     "***REMOVED***"
   let client_id = "***REMOVED***"
@@ -45,8 +44,8 @@ pub fn main() -> Nil {
 pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
   let api_key = result.unwrap(envoy.get("OPENAI_API_KEY"), "")
   let config =
-    openai.Config(
-      model: openai.Gpt4o,
+    openai_config.Config(
+      model: openai_config.Gpt4o,
       api_key: api_key,
       instructions: instructions,
       http_client: option.None,
@@ -57,15 +56,15 @@ pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
   let assert Ok(first_prompt) = input.input(prompt: "> ")
 
   // Start recursion with initial chat history
-  interactive_loop(config, [openai.ResponsesInput("user", first_prompt)])
+  interactive_loop(config, [openai_types.ResponsesInput("user", first_prompt)])
 }
 
 fn interactive_loop(
-  config: openai.Config,
-  messages: List(openai.ResponsesInput),
+  config: openai_config.Config,
+  messages: List(openai_types.ResponsesInput),
 ) -> Result(Playlist, errors.TidalAPIError) {
   // Ask OpenAI for a playlist suggestion
-  case openai.ask(messages, config) {
+  case openai_api.ask(messages, config) {
     Ok(reply) -> {
       io.println("\nProposed Playlist:\n")
       io.println(reply)
@@ -93,8 +92,8 @@ fn interactive_loop(
           // Add both AI reply and new user prompt to context
           let new_messages =
             list.append(messages, [
-              openai.ResponsesInput("assistant", reply),
-              openai.ResponsesInput("user", new_prompt),
+              openai_types.ResponsesInput("assistant", reply),
+              openai_types.ResponsesInput("user", new_prompt),
             ])
           interactive_loop(config, new_messages)
           // recursive call
@@ -136,50 +135,6 @@ fn handle_tidal_error(err: errors.TidalAPIError) {
       io.println("Unexpected response error: " <> reason)
     errors.TidalDeviceAuthorizationExpiredError ->
       io.println("Device Authorization Expired")
-  }
-}
-
-pub fn generate_playlist(input: String) -> Result(Playlist, String) {
-  let api_key = result.unwrap(envoy.get("OPENAI_API_KEY"), "")
-  let config =
-    openai.Config(
-      model: openai.Gpt4o,
-      api_key: api_key,
-      instructions: instructions,
-      http_client: option.None,
-    )
-  case
-    openai.responses(
-      [openai.ResponsesInput(role: "user", content: input)],
-      config,
-    )
-  {
-    Ok(openai.Response(_, [openai.Output(_, [openai.Content(text), ..]), ..])) -> {
-      io.println("What would you like to name the playlist?")
-      let assert Ok(title) = input.input(prompt: "> ")
-      io.println("What would you like to set for the description?")
-      let assert Ok(description) = input.input(prompt: "> ")
-
-      let songs = parse_playlist(text)
-      Ok(Playlist(songs: songs, title: title, description: description))
-    }
-
-    Error(errors.HttpError(reason)) -> {
-      io.println("Http request error: " <> reason)
-      Error(reason)
-    }
-    Error(errors.ParseError(reason)) -> {
-      io.println("Parse error: " <> reason)
-      Error(reason)
-    }
-    Error(errors.OtherError(reason)) -> {
-      io.println("Unknown error: " <> reason)
-      Error(reason)
-    }
-    _ -> {
-      io.println("data malformed")
-      Error("data malformed")
-    }
   }
 }
 
