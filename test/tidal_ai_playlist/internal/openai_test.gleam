@@ -38,10 +38,19 @@ pub fn responses_returns_decoded_response_test() {
     Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
   let response =
-    api.responses([types.ResponsesInput(role: "user", content: "input text")], config)
+    api.responses(
+      [types.ResponsesInput(role: "user", content: "input text")],
+      config,
+    )
   assert response
     == Ok(
       types.Response(id: "resp1", output: [
@@ -57,10 +66,19 @@ pub fn responses_malformed_test() {
     Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
   let response =
-    api.responses([types.ResponsesInput(role: "user", content: "input text")], config)
+    api.responses(
+      [types.ResponsesInput(role: "user", content: "input text")],
+      config,
+    )
   assert Error(errors.ParseError("Failed to parse json: unexpected byte 0x6D"))
     == response
 }
@@ -69,9 +87,19 @@ pub fn responses_propagates_http_errors_test() {
   let fake_sender: http.Client = fn(_req) {
     Error(errors.HttpError("network down"))
   }
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
-  let response = api.responses([types.ResponsesInput(role: "user", content: "input text")], config)
+  let response =
+    api.responses(
+      [types.ResponsesInput(role: "user", content: "input text")],
+      config,
+    )
   assert response == Error(errors.HttpError("network down"))
 }
 
@@ -95,12 +123,17 @@ pub fn ask_returns_only_text_test() {
     Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
   let response =
     api.ask([types.ResponsesInput(role: "user", content: "input text")], config)
-  assert response
-    == Ok("Hello world!")
+  assert response == Ok("Hello world!")
 }
 
 pub fn ask_malformed_test() {
@@ -110,7 +143,13 @@ pub fn ask_malformed_test() {
     Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
   let response =
     api.ask([types.ResponsesInput(role: "user", content: "input text")], config)
@@ -122,8 +161,15 @@ pub fn ask_propagates_http_errors_test() {
   let fake_sender: http.Client = fn(_req) {
     Error(errors.HttpError("network down"))
   }
-  let config = config.Config(config.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+  let config =
+    config.Config(
+      config.Gpt4o,
+      "instructions",
+      "dummy_api_key",
+      option.Some(fake_sender),
+    )
 
-  let response = api.ask([types.ResponsesInput(role: "user", content: "input text")], config)
+  let response =
+    api.ask([types.ResponsesInput(role: "user", content: "input text")], config)
   assert response == Error(errors.HttpError("network down"))
 }
