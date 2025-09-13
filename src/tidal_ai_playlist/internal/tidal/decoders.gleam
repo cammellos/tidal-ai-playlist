@@ -54,6 +54,19 @@ pub fn decode_create_playlist_response(
   }
 }
 
+pub fn decode_search_track_response(
+  body: String,
+) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
+  case json.parse(from: body, using: search_track_response_decoder()) {
+    Ok(decoded_response) -> Ok(decoded_response)
+    Error(err) -> {
+      Error(errors.ParseError(
+        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
+      ))
+    }
+  }
+}
+
 fn oauth_token_decoder() -> decode.Decoder(types.OauthToken) {
   {
     use access_token <- decode.field("access_token", decode.string)
@@ -113,5 +126,30 @@ fn create_playlist_response_decoder() -> decode.Decoder(
   {
     use id <- decode.field("uuid", decode.string)
     decode.success(types.CreatePlaylistResponse(id: id, etag: ""))
+  }
+}
+
+fn search_track_response_decoder() -> decode.Decoder(types.SearchTrackResponse) {
+  {
+    use top_hit <- decode.field("topHit", top_hit_decoder())
+    decode.success(types.SearchTrackResponse(
+      id: top_hit.id,
+      title: top_hit.title,
+    ))
+  }
+}
+
+fn top_hit_decoder() -> decode.Decoder(types.TopHit) {
+  {
+    use top_hit <- decode.field("value", value_decoder())
+    decode.success(top_hit)
+  }
+}
+
+fn value_decoder() -> decode.Decoder(types.TopHit) {
+  {
+    use id <- decode.field("id", decode.int)
+    use title <- decode.field("title", decode.string)
+    decode.success(types.TopHit(id: id, title: title))
   }
 }

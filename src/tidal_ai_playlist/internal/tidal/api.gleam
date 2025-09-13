@@ -117,6 +117,50 @@ pub fn create_playlist(
   }
 }
 
+pub fn search_track(
+  config: config.Config,
+  token: types.RefreshTokenResponse,
+  artist: String,
+  song: String,
+  session_id: String,
+) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
+  let http_client = option.unwrap(config.http_client, http.default_client)
+  case
+    http_client(tidal_http.search_track(
+      artist,
+      song,
+      token.access_token,
+      session_id,
+    ))
+  {
+    Ok(response) -> decoders.decode_search_track_response(response.body)
+    Error(err) -> Error(err)
+  }
+}
+
+pub fn add_tracks_to_playlist(
+  config: config.Config,
+  token: types.RefreshTokenResponse,
+  playlist_id: String,
+  song_ids: List(Int),
+  session_id: String,
+  etag: String,
+) -> Result(String, errors.TidalAPIError) {
+  let http_client = option.unwrap(config.http_client, http.default_client)
+  case
+    http_client(tidal_http.add_tracks_to_playlist(
+      playlist_id,
+      song_ids,
+      token.access_token,
+      etag,
+      session_id,
+    ))
+  {
+    Ok(response) -> Ok(response.body)
+    Error(err) -> Error(err)
+  }
+}
+
 fn poll_device_authorization(
   remaining: Int,
   interval: Int,

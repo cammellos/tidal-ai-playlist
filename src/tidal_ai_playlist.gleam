@@ -10,9 +10,8 @@ import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/openai/api as openai_api
 import tidal_ai_playlist/internal/openai/config as openai_config
 import tidal_ai_playlist/internal/openai/types as openai_types
-import tidal_ai_playlist/internal/tidal/api as tidal_new_api
+import tidal_ai_playlist/internal/tidal/api as tidal_api
 import tidal_ai_playlist/internal/tidal/config as tidal_config
-import tidal_ai_playlist/internal/tidal_api
 
 const instructions = "You are a music recommendation assistant.
 
@@ -132,7 +131,7 @@ fn create_playlist() {
       client_secret: client_secret,
       http_client: option.None,
     )
-  case tidal_new_api.login(config) {
+  case tidal_api.login(config) {
     Ok(_) -> io.println("OK")
     Error(err) -> errors.print_error(err)
   }
@@ -180,10 +179,10 @@ pub fn create_tidal_playlist_from_openai(
   playlist: Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
   // 1. Refresh token
-  use token <- result.try(tidal_new_api.refresh_token(config, refresh_token))
+  use token <- result.try(tidal_api.refresh_token(config, refresh_token))
 
   // 2. Create the playlist on Tidal
-  use new_playlist <- result.try(tidal_new_api.create_playlist(
+  use new_playlist <- result.try(tidal_api.create_playlist(
     config,
     token,
     playlist.title,
@@ -199,10 +198,11 @@ pub fn create_tidal_playlist_from_openai(
       // For each Song, try to search and return Result(Int, String)
       io.println("Searching for: " <> song.artist <> " " <> song.title)
       result.map(
-        tidal_api.do_search_track(
+        tidal_api.search_track(
+          config,
+          token,
           song.artist,
           song.title,
-          token.access_token,
           session_id,
         ),
         fn(track) { track.id },
@@ -220,10 +220,11 @@ pub fn create_tidal_playlist_from_openai(
   list.map(track_ids, fn(x) { io.println(int.to_string(x)) })
 
   // 4. Add tracks to playlist
-  use _ <- result.try(tidal_api.do_add_tracks_to_playlist(
+  use _ <- result.try(tidal_api.add_tracks_to_playlist(
+    config,
+    token,
     new_playlist.id,
     track_ids,
-    token.access_token,
     session_id,
     new_playlist.etag,
   ))

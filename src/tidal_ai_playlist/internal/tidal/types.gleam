@@ -25,3 +25,11 @@ pub type RefreshTokenResponse {
 pub type CreatePlaylistResponse {
   CreatePlaylistResponse(id: String, etag: String)
 }
+
+pub type SearchTrackResponse {
+  SearchTrackResponse(id: Int, title: String)
+}
+
+pub type TopHit {
+  TopHit(id: Int, title: String)
+}

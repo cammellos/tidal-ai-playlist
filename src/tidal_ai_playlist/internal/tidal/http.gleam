@@ -1,6 +1,8 @@
 import gleam/http
 import gleam/http/request
 import gleam/int
+import gleam/list
+import gleam/string
 import gleam/uri
 
 import tidal_ai_playlist/internal/tidal/config
@@ -10,6 +12,8 @@ const base_api_host = "api.tidal.com"
 const base_auth_host = "auth.tidal.com"
 
 const device_authorization_path = "/v1/oauth2/device_authorization"
+
+const search_path = "/v1/search"
 
 const scope = "r_usr w_usr w_sub"
 
@@ -96,6 +100,53 @@ pub fn create_playlist(
   |> request.set_method(http.Post)
 }
 
+pub fn search_track(
+  artist: String,
+  song: String,
+  access_token: String,
+  session_id: String,
+) -> request.Request(String) {
+  let query = [
+    #("query", artist <> " " <> song),
+    #("limit", "50"),
+    #("offset", "0"),
+    #("types", "TRACKS"),
+    #("sessionId", session_id),
+    #("countryCode", "GB"),
+  ]
+  base_api_client()
+  |> request.set_path(search_path)
+  |> request.set_method(http.Get)
+  |> request.prepend_header("authorization", "Bearer " <> access_token)
+  |> request.prepend_header("Content-Type", "application/x-www-form-urlencoded")
+  |> request.set_query(query)
+}
+
+pub fn add_tracks_to_playlist(
+  playlist_id: String,
+  song_ids: List(Int),
+  access_token: String,
+  etag: String,
+  session_id: String,
+) -> request.Request(String) {
+  let song_ids_strings = list.map(song_ids, fn(i) { int.to_string(i) })
+  let body =
+    "trackIds="
+    <> string.join(song_ids_strings, ",")
+    <> "&onDupes=SKIP"
+    <> "&countryCode=GB"
+    <> "&sessionId="
+    <> session_id
+
+  base_api_client()
+  |> request.set_path(build_playlist_items_path(playlist_id))
+  |> request.prepend_header("authorization", "Bearer " <> access_token)
+  |> request.prepend_header("Content-Type", "application/x-www-form-urlencoded")
+  |> request.prepend_header("If-None-Match", etag)
+  |> request.set_method(http.Post)
+  |> request.set_body(body)
+}
+
 fn base_client() -> request.Request(String) {
   request.new()
   |> request.set_scheme(http.Https)
@@ -115,4 +166,8 @@ fn base_auth_client() -> request.Request(String) {
 
 fn build_playlist_path(user_id: Int) -> String {
   "/v1/users/" <> int.to_string(user_id) <> "/playlists"
+}
+
+fn build_playlist_items_path(playlist_id: String) -> String {
+  "/v1/playlists/" <> playlist_id <> "/items"
 }
