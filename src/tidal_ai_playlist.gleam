@@ -65,9 +65,8 @@ fn interactive_loop(
   messages: List(openai.ResponsesInput),
 ) -> Result(Playlist, errors.TidalAPIError) {
   // Ask OpenAI for a playlist suggestion
-  case openai.responses(messages, config) {
-    Ok(reply_response) -> {
-      let reply = extract_text(reply_response)
+  case openai.ask(messages, config) {
+    Ok(reply) -> {
       io.println("\nProposed Playlist:\n")
       io.println(reply)
 
@@ -133,17 +132,11 @@ fn handle_tidal_error(err: errors.TidalAPIError) {
     errors.HttpError(reason) -> io.println("Http Error: " <> reason)
     errors.ParseError(reason) -> io.println("Parse Error: " <> reason)
     errors.OtherError(reason) -> io.println("Other Error: " <> reason)
+    errors.UnexpectedResponseFormatError(reason) ->
+      io.println("Unexpected response error: " <> reason)
     errors.TidalDeviceAuthorizationExpiredError ->
       io.println("Device Authorization Expired")
   }
-}
-
-fn extract_text(response: openai.Response) -> String {
-  let assert openai.Response(
-    _,
-    [openai.Output(_, [openai.Content(text), ..]), ..],
-  ) = response
-  text
 }
 
 pub fn generate_playlist(input: String) -> Result(Playlist, String) {

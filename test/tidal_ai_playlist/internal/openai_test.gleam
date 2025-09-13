@@ -71,3 +71,56 @@ pub fn responses_propagates_http_errors_test() {
   let response = openai.responses([openai.ResponsesInput(role: "user", content: "input text")], config)
   assert response == Error(errors.HttpError("network down"))
 }
+
+pub fn ask_returns_only_text_test() {
+  let fake_body =
+    "
+      {
+        \"id\": \"resp1\",
+        \"output\": [
+          {
+            \"id\": \"out1\",
+            \"content\": [
+              {\"text\": \"Hello world!\"}
+            ]
+          }
+        ]
+      }
+      "
+
+  let fake_sender: http.Client = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
+  }
+
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+
+  let response =
+    openai.ask([openai.ResponsesInput(role: "user", content: "input text")], config)
+  assert response
+    == Ok("Hello world!")
+}
+
+pub fn ask_malformed_test() {
+  let fake_body = "malformed"
+
+  let fake_sender: http.Client = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
+  }
+
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+
+  let response =
+    openai.ask([openai.ResponsesInput(role: "user", content: "input text")], config)
+  assert Error(errors.ParseError("Failed to parse json: unexpected byte 0x6D"))
+    == response
+}
+
+pub fn ask_propagates_http_errors_test() {
+  let fake_sender: http.Client = fn(_req) {
+    Error(errors.HttpError("network down"))
+  }
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
+
+  let response = openai.ask([openai.ResponsesInput(role: "user", content: "input text")], config)
+  assert response == Error(errors.HttpError("network down"))
+}

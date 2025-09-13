@@ -4,6 +4,7 @@ import gleam/http/request
 import gleam/json
 import gleam/list
 import gleam/option
+import gleam/result
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http as tidal_http
 import tidal_ai_playlist/internal/json as tidal_json
@@ -44,15 +45,6 @@ pub type ResponsesInput {
   ResponsesInput(role: String, content: String)
 }
 
-pub fn encode_responses_input(input: List(ResponsesInput)) -> json.Json {
-  json.array(input, fn(x) {
-    json.object([
-      #("role", json.string(x.role)),
-      #("content", json.string(x.content)),
-    ])
-  })
-}
-
 pub fn responses(
   input: List(ResponsesInput),
   config: Config,
@@ -65,6 +57,14 @@ pub fn responses(
   }
 }
 
+pub fn ask(
+  input: List(ResponsesInput),
+  config: Config,
+) -> Result(String, errors.TidalAPIError) {
+  use response <- result.try(responses(input, config))
+  extract_text(response)
+}
+
 pub fn model_to_string(model: Model) -> String {
   case model {
     Gpt4o -> "gpt-4o"
@@ -72,6 +72,15 @@ pub fn model_to_string(model: Model) -> String {
     Gpt35Turbo -> "gpt-3.5-turbo"
     Other(name) -> name
   }
+}
+
+fn encode_responses_input(input: List(ResponsesInput)) -> json.Json {
+  json.array(input, fn(x) {
+    json.object([
+      #("role", json.string(x.role)),
+      #("content", json.string(x.content)),
+    ])
+  })
 }
 
 fn decode_response(body: String) -> Result(Response, errors.TidalAPIError) {
@@ -126,5 +135,16 @@ fn response_decoder() -> decode.Decoder(Response) {
     use id <- decode.field("id", decode.string)
     use output <- decode.field("output", decode.list(output_decoder()))
     decode.success(Response(id: id, output: output))
+  }
+}
+
+fn extract_text(response: Response) -> Result(String, errors.TidalAPIError) {
+  case response {
+    Response(_, [Output(_, [Content(text), ..]), ..]) -> Ok(text)
+
+    _ ->
+      Error(errors.UnexpectedResponseFormatError(
+        "OpenAI response is not the expected format",
+      ))
   }
 }
