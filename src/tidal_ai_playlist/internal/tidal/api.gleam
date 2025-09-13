@@ -59,7 +59,7 @@ pub fn refresh_token(
 pub fn authorize_device(
   config: config.Config,
 ) -> Result(types.DeviceAuthorizationResponse, errors.TidalAPIError) {
-  let http_client = http.default_client
+  let http_client = option.unwrap(config.http_client, http.default_client)
   let req = tidal_http.authorize_device(config.client_id)
 
   case http_client(req) {
@@ -72,7 +72,7 @@ pub fn exchange_device_code_for_token(
   config: config.Config,
   device_code: String,
 ) -> Result(types.OauthToken, errors.TidalAPIError) {
-  let http_client = http.default_client
+  let http_client = option.unwrap(config.http_client, http.default_client)
   let req = tidal_http.exchange_device_code_for_token(config, device_code)
   case http_client(req) {
     Ok(resp) ->
@@ -82,6 +82,37 @@ pub fn exchange_device_code_for_token(
         _ -> Error(errors.OtherError("Unexpected status code from tidal api"))
       }
 
+    Error(err) -> Error(err)
+  }
+}
+
+pub fn create_playlist(
+  config: config.Config,
+  token: types.RefreshTokenResponse,
+  title: String,
+  description: String,
+  session_id: String,
+) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
+  let http_client = option.unwrap(config.http_client, http.default_client)
+  case
+    http_client(tidal_http.create_playlist(
+      token.user_id,
+      title,
+      description,
+      token.access_token,
+      session_id,
+    ))
+  {
+    Ok(response) -> {
+      case decoders.decode_create_playlist_response(response.body) {
+        Ok(decoded_response) ->
+          Ok(types.CreatePlaylistResponse(
+            id: decoded_response.id,
+            etag: response.etag,
+          ))
+        Error(err) -> Error(err)
+      }
+    }
     Error(err) -> Error(err)
   }
 }

@@ -1,7 +1,11 @@
 import gleam/http
 import gleam/http/request
+import gleam/int
+import gleam/uri
 
 import tidal_ai_playlist/internal/tidal/config
+
+const base_api_host = "api.tidal.com"
 
 const base_auth_host = "auth.tidal.com"
 
@@ -66,10 +70,49 @@ pub fn exchange_refresh_token(
   |> request.set_body(body)
 }
 
-fn base_auth_client() -> request.Request(String) {
+pub fn create_playlist(
+  user_id: Int,
+  title: String,
+  description: String,
+  access_token: String,
+  session_id: String,
+) -> request.Request(String) {
+  let body =
+    "title="
+    <> uri.percent_encode(title)
+    <> "&description="
+    <> uri.percent_encode(description)
+    <> "&countryCode="
+    <> uri.percent_encode("GB")
+    <> "&sessionId="
+    <> uri.percent_encode(session_id)
+
+  base_api_client()
+  |> request.set_path(build_playlist_path(user_id))
+  |> request.prepend_header("authorization", "Bearer " <> access_token)
+  |> request.prepend_header("content-type", "application/x-www-form-urlencoded")
+  |> request.set_host(base_api_host)
+  |> request.set_body(body)
+  |> request.set_method(http.Post)
+}
+
+fn base_client() -> request.Request(String) {
   request.new()
   |> request.set_scheme(http.Https)
   |> request.prepend_header("User-Agent", user_agent)
   |> request.prepend_header("x-tidal-client-version", client_version)
+}
+
+fn base_api_client() -> request.Request(String) {
+  base_client()
+  |> request.set_host(base_api_host)
+}
+
+fn base_auth_client() -> request.Request(String) {
+  base_client()
   |> request.set_host(base_auth_host)
+}
+
+fn build_playlist_path(user_id: Int) -> String {
+  "/v1/users/" <> int.to_string(user_id) <> "/playlists"
 }

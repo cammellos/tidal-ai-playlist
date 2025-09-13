@@ -41,6 +41,19 @@ pub fn decode_refresh_token_response(
   }
 }
 
+pub fn decode_create_playlist_response(
+  body: String,
+) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
+  case json.parse(from: body, using: create_playlist_response_decoder()) {
+    Ok(decoded_response) -> Ok(decoded_response)
+    Error(err) -> {
+      Error(errors.ParseError(
+        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
+      ))
+    }
+  }
+}
+
 fn oauth_token_decoder() -> decode.Decoder(types.OauthToken) {
   {
     use access_token <- decode.field("access_token", decode.string)
@@ -91,5 +104,14 @@ fn refresh_token_response_decoder() -> decode.Decoder(
       access_token: access_token,
       user_id: user_id,
     ))
+  }
+}
+
+fn create_playlist_response_decoder() -> decode.Decoder(
+  types.CreatePlaylistResponse,
+) {
+  {
+    use id <- decode.field("uuid", decode.string)
+    decode.success(types.CreatePlaylistResponse(id: id, etag: ""))
   }
 }

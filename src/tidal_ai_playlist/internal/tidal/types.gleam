@@ -21,3 +21,7 @@ pub type OauthToken {
 pub type RefreshTokenResponse {
   RefreshTokenResponse(access_token: String, user_id: Int)
 }
+
+pub type CreatePlaylistResponse {
+  CreatePlaylistResponse(id: String, etag: String)
+}

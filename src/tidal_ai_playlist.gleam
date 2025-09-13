@@ -183,11 +183,11 @@ pub fn create_tidal_playlist_from_openai(
   use token <- result.try(tidal_new_api.refresh_token(config, refresh_token))
 
   // 2. Create the playlist on Tidal
-  use new_playlist <- result.try(tidal_api.do_create_playlist(
-    token.user_id,
+  use new_playlist <- result.try(tidal_new_api.create_playlist(
+    config,
+    token,
     playlist.title,
     playlist.description,
-    token.access_token,
     session_id,
   ))
   io.println("SEARCHING")
