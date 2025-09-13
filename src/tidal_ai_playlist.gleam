@@ -25,7 +25,7 @@ Wrap the playlist between exactly these separator lines:
 ====="
 
 pub fn main() -> Nil {
-  //create_playlist()
+  create_playlist()
   let assert Ok(playlist) = interactive_playlist()
   let assert Ok(tidal_config) = load_tidal_config()
   create_tidal_playlist_from_openai(tidal_config, playlist)
