@@ -1,10 +1,6 @@
 import gleam/erlang/process.{type Subject}
 import gleam/http/request
-import gleam/int
-import gleam/io
-import gleam/option
 import gleam/otp/actor
-import gleam/result
 
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http

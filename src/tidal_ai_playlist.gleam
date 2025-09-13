@@ -1,18 +1,22 @@
-import envoy
 import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option
 import gleam/result
 import gleam/string
+
+import envoy
 import input
+
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/openai/api as openai_api
 import tidal_ai_playlist/internal/openai/config as openai_config
 import tidal_ai_playlist/internal/openai/types as openai_types
+import tidal_ai_playlist/internal/playlist_parser
 import tidal_ai_playlist/internal/tidal/api as tidal_api
 import tidal_ai_playlist/internal/tidal/config as tidal_config
 import tidal_ai_playlist/internal/tidal/types as tidal_types
+import tidal_ai_playlist/internal/types
 
 const instructions = "You are a music recommendation assistant.
 
@@ -50,7 +54,7 @@ fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAPIError) {
   |> Ok
 }
 
-pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
+pub fn interactive_playlist() -> Result(types.Playlist, errors.TidalAPIError) {
   let api_key = result.unwrap(envoy.get("OPENAI_API_KEY"), "")
   let config =
     openai_config.Config(
@@ -71,7 +75,7 @@ pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
 fn interactive_loop(
   config: openai_config.Config,
   messages: List(openai_types.ResponsesInput),
-) -> Result(Playlist, errors.TidalAPIError) {
+) -> Result(types.Playlist, errors.TidalAPIError) {
   // Ask OpenAI for a playlist suggestion
   case openai_api.ask(messages, config) {
     Ok(reply) -> {
@@ -90,8 +94,12 @@ fn interactive_loop(
           io.println("What would you like to set for the description?")
           let assert Ok(description) = input.input(prompt: "> ")
 
-          let songs = parse_playlist(reply)
-          Ok(Playlist(songs: songs, title: title, description: description))
+          let songs = playlist_parser.parse(reply)
+          Ok(types.Playlist(
+            songs: songs,
+            title: title,
+            description: description,
+          ))
         }
 
         _ -> {
@@ -117,14 +125,6 @@ fn interactive_loop(
   }
 }
 
-pub type Song {
-  Song(artist: String, title: String)
-}
-
-pub type Playlist {
-  Playlist(songs: List(Song), title: String, description: String)
-}
-
 fn create_playlist() {
   let client_id = result.unwrap(envoy.get("TIDAL_CLIENT_ID"), "")
   let client_secret = result.unwrap(envoy.get("TIDAL_CLIENT_SECRET"), "")
@@ -135,46 +135,10 @@ fn create_playlist() {
   }
 }
 
-fn parse_playlist(playlist: String) -> List(Song) {
-  let separator = "======="
-  io.println("Raw playlist:\n" <> playlist)
-
-  // Extract only the part between the first and last separators
-  let parts = string.split(playlist, separator)
-  let inner = case parts {
-    // If model returns: =============\n...\n============
-    [_before, inner, ..] -> string.trim(inner)
-    // If it returns only the content
-    [only] -> string.trim(only)
-    _ -> playlist
-    // fallback
-  }
-
-  // Split lines and parse each safely
-  string.split(inner, "\n")
-  |> list.filter(fn(line) {
-    let trimmed = string.trim(line)
-    trimmed != "" && trimmed != separator
-  })
-  |> list.map(fn(line) {
-    let fields = string.split(line, "\t")
-    case fields {
-      [artist, title] ->
-        Song(artist: string.trim(artist), title: string.trim(title))
-      _ -> {
-        io.println("Skipping malformed line: " <> line)
-        Song(artist: "", title: "")
-      }
-    }
-  })
-  |> list.filter(fn(song) { song.artist != "" && song.title != "" })
-}
-
 pub fn create_tidal_playlist_from_openai(
   config: tidal_types.Config,
-  playlist: Playlist,
+  playlist: types.Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
-  // 2. Create the playlist on Tidal
   use new_playlist <- result.try(tidal_api.create_playlist(
     config,
     playlist.title,
@@ -182,7 +146,6 @@ pub fn create_tidal_playlist_from_openai(
   ))
   io.println("SEARCHING")
 
-  // 3. For each song in playlist.songs search Tidal and collect IDs
   let track_ids =
     playlist.songs
     |> list.map(fn(song) {
@@ -204,7 +167,6 @@ pub fn create_tidal_playlist_from_openai(
     })
   list.map(track_ids, fn(x) { io.println(int.to_string(x)) })
 
-  // 4. Add tracks to playlist
   use _ <- result.try(tidal_api.add_tracks_to_playlist(
     config,
     new_playlist.id,
