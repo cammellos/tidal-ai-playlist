@@ -10,7 +10,8 @@ import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/openai/api as openai_api
 import tidal_ai_playlist/internal/openai/config as openai_config
 import tidal_ai_playlist/internal/openai/types as openai_types
-import tidal_ai_playlist/internal/tidal
+import tidal_ai_playlist/internal/tidal/api as tidal_new_api
+import tidal_ai_playlist/internal/tidal/config as tidal_config
 import tidal_ai_playlist/internal/tidal_api
 
 const instructions = "You are a music recommendation assistant.
@@ -24,16 +25,22 @@ Wrap the playlist between exactly these separator lines:
 ====="
 
 pub fn main() -> Nil {
+  //create_playlist()
   let assert Ok(playlist) = interactive_playlist()
   let refresh_token =
     "***REMOVED***"
   let client_id = "***REMOVED***"
   let client_secret = "***REMOVED***"
   let session_id = "2dc6cd75-7c6f-4943-b7a6-5807ea8862ae"
+  let tidal_config =
+    tidal_config.Config(
+      client_id: client_id,
+      client_secret: client_secret,
+      http_client: option.None,
+    )
 
   create_tidal_playlist_from_openai(
-    client_id,
-    client_secret,
+    tidal_config,
     refresh_token,
     session_id,
     playlist,
@@ -116,11 +123,16 @@ pub type Playlist {
   Playlist(songs: List(Song), title: String, description: String)
 }
 
-fn create_playlist(playlist: Playlist) {
+fn create_playlist() {
   let client_id = result.unwrap(envoy.get("TIDAL_CLIENT_ID"), "")
   let client_secret = result.unwrap(envoy.get("TIDAL_CLIENT_SECRET"), "")
-  let config = tidal.Config(client_id: client_id, client_secret: client_secret)
-  case tidal.login(config) {
+  let config =
+    tidal_config.Config(
+      client_id: client_id,
+      client_secret: client_secret,
+      http_client: option.None,
+    )
+  case tidal_new_api.login(config) {
     Ok(_) -> io.println("OK")
     Error(err) -> handle_tidal_error(err)
   }
@@ -174,18 +186,13 @@ fn parse_playlist(playlist: String) -> List(Song) {
 }
 
 pub fn create_tidal_playlist_from_openai(
-  client_id: String,
-  client_secret: String,
+  config: tidal_config.Config,
   refresh_token: String,
   session_id: String,
   playlist: Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
   // 1. Refresh token
-  use token <- result.try(tidal_api.do_refresh_token(
-    client_id,
-    client_secret,
-    refresh_token,
-  ))
+  use token <- result.try(tidal_new_api.refresh_token(config, refresh_token))
 
   // 2. Create the playlist on Tidal
   use new_playlist <- result.try(tidal_api.do_create_playlist(

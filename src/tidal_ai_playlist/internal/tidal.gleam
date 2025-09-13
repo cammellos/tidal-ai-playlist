@@ -1,8 +1,5 @@
 import gleam/dynamic/decode
 import gleam/erlang/process
-import gleam/http
-import gleam/http/request
-import gleam/int
 import gleam/io
 import gleam/json
 import tidal_ai_playlist/internal/errors
