@@ -1,5 +1,8 @@
 import gleam/option
 
+import envoy
+
+import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http
 
 pub type Config {
@@ -24,5 +27,18 @@ pub fn model_to_string(model: Model) -> String {
     Gpt4oMini -> "gpt-4o-mini"
     Gpt35Turbo -> "gpt-3.5-turbo"
     Other(name) -> name
+  }
+}
+
+pub fn from_env(instructions) -> Result(Config, errors.TidalAPIError) {
+  case envoy.get("OPENAI_API_KEY") {
+    Ok(openai_api_key) ->
+      Ok(Config(
+        model: Gpt4o,
+        api_key: openai_api_key,
+        instructions: instructions,
+        http_client: option.Some(http.default_client),
+      ))
+    _ -> Error(errors.OpenAICredentialsMissing)
   }
 }

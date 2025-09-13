@@ -151,12 +151,13 @@ fn config_decoder() -> decode.Decoder(types.Config) {
     use client_id <- decode.field("client_id", decode.string)
     use client_secret <- decode.field("client_secret", decode.string)
     use refresh_token <- decode.field("refresh_token", decode.string)
+    use user_id <- decode.field("user_id", decode.int)
     decode.success(types.Config(
       client_id: client_id,
       client_secret: client_secret,
       refresh_token: option.Some(refresh_token),
       access_token: option.None,
-      user_id: option.None,
+      user_id: option.Some(user_id),
       http_client: option.None,
       session_id: "",
     ))

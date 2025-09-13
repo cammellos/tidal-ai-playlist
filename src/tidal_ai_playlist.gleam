@@ -8,6 +8,7 @@ import gleam/string
 import envoy
 import input
 
+import tidal_ai_playlist/internal/config
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/openai/api as openai_api
 import tidal_ai_playlist/internal/openai/config as openai_config
@@ -29,55 +30,90 @@ Wrap the playlist between exactly these separator lines:
 ====="
 
 pub fn main() -> Nil {
-  create_playlist()
-  let assert Ok(playlist) = interactive_playlist()
-  let assert Ok(tidal_config) = load_tidal_config()
-  create_tidal_playlist_from_openai(tidal_config, playlist)
+  //create_playlist()
+  start(option.None)
+}
+
+pub fn start(config: option.Option(config.Config)) {
+  let assert Ok(playlist) = interactive_playlist(config)
   Nil
 }
 
 fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAPIError) {
-  let refresh_token =
-    "***REMOVED***"
-  let client_id = "***REMOVED***"
-  let client_secret = "***REMOVED***"
+  let filepath_result = envoy.get("TIDAL_AI_PLAYLIST_CONFIG")
+
+  use config <- result.try(case filepath_result {
+    Ok(filepath) -> {
+      io.println("LOOKING FOR FILEPATH")
+      case tidal_config.from_file(filepath) {
+        Ok(config) -> Ok(config)
+        Error(_) -> {
+          io.println("ERRRO")
+          tidal_config.from_env()
+        }
+      }
+    }
+    Error(Nil) -> tidal_config.from_env()
+  })
+
+  use #(refresh_token, user_id) <- result.try(
+    case config.refresh_token, config.user_id {
+      option.Some(refresh_token), option.Some(user_id) ->
+        Ok(#(refresh_token, user_id))
+      _, _ ->
+        case tidal_api.login(config) {
+          Ok(oauth_token) ->
+            Ok(#(oauth_token.refresh_token, oauth_token.user_id))
+          Error(err) -> Error(err)
+        }
+    },
+  )
 
   let config =
-    tidal_config.new(client_id, client_secret)
+    config
     |> tidal_config.add_refresh_token(refresh_token)
+    |> tidal_config.add_user_id(user_id)
 
   use access_token_response <- result.try(tidal_api.refresh_token(config))
 
-  config
-  |> tidal_config.add_access_token(access_token_response.access_token)
-  |> tidal_config.add_user_id(access_token_response.user_id)
-  |> Ok
+  let config =
+    config
+    |> tidal_config.add_access_token(access_token_response.access_token)
+    |> tidal_config.add_user_id(access_token_response.user_id)
+
+  case filepath_result {
+    Ok(filepath) -> tidal_config.to_file(config, filepath)
+    _ -> Ok(config)
+  }
 }
 
-pub fn interactive_playlist() -> Result(types.Playlist, errors.TidalAPIError) {
-  let api_key = result.unwrap(envoy.get("OPENAI_API_KEY"), "")
-  let config =
-    openai_config.Config(
-      model: openai_config.Gpt4o,
-      api_key: api_key,
-      instructions: instructions,
-      http_client: option.None,
-    )
-
-  // Ask initial prompt
+pub fn interactive_playlist(
+  config: option.Option(config.Config),
+) -> Result(Nil, errors.TidalAPIError) {
+  use config <- result.try(case config {
+    option.Some(config) -> Ok(config)
+    option.None -> default_config()
+  })
   io.println("What music would you like to listen to today?")
   let assert Ok(first_prompt) = input.input(prompt: "> ")
 
-  // Start recursion with initial chat history
-  interactive_loop(config, [openai_types.ResponsesInput("user", first_prompt)])
+  use playlist <- result.try(
+    interactive_loop(config, [openai_types.ResponsesInput("user", first_prompt)]),
+  )
+  create_tidal_playlist_from_openai(config, playlist)
+}
+
+fn default_config() -> Result(config.Config, errors.TidalAPIError) {
+  use openai_config <- result.try(openai_config.from_env(instructions))
+  use tidal_config <- result.try(load_tidal_config())
+  Ok(config.Config(openai_config: openai_config, tidal_config: tidal_config))
 }
 
 fn interactive_loop(
-  config: openai_config.Config,
+  config: config.Config,
   messages: List(openai_types.ResponsesInput),
 ) -> Result(types.Playlist, errors.TidalAPIError) {
-  // Ask OpenAI for a playlist suggestion
-  case openai_api.ask(messages, config) {
+  case openai_api.ask(messages, config.openai_config) {
     Ok(reply) -> {
       io.println("\nProposed Playlist:\n")
       io.println(reply)
@@ -88,7 +124,6 @@ fn interactive_loop(
 
       case trimmed {
         "y" -> {
-          // Playlist accepted, ask for title/description
           io.println("What would you like to name the playlist?")
           let assert Ok(title) = input.input(prompt: "> ")
           io.println("What would you like to set for the description?")
@@ -103,17 +138,14 @@ fn interactive_loop(
         }
 
         _ -> {
-          // User wants a revision
           io.println("What would you like changed?")
           let assert Ok(new_prompt) = input.input(prompt: "> ")
-          // Add both AI reply and new user prompt to context
           let new_messages =
             list.append(messages, [
               openai_types.ResponsesInput("assistant", reply),
               openai_types.ResponsesInput("user", new_prompt),
             ])
           interactive_loop(config, new_messages)
-          // recursive call
         }
       }
     }
@@ -125,34 +157,22 @@ fn interactive_loop(
   }
 }
 
-fn create_playlist() {
-  let client_id = result.unwrap(envoy.get("TIDAL_CLIENT_ID"), "")
-  let client_secret = result.unwrap(envoy.get("TIDAL_CLIENT_SECRET"), "")
-  let config = tidal_config.new(client_id, client_secret)
-  case tidal_api.login(config) {
-    Ok(_) -> io.println("OK")
-    Error(err) -> errors.print_error(err)
-  }
-}
-
 pub fn create_tidal_playlist_from_openai(
-  config: tidal_types.Config,
+  config: config.Config,
   playlist: types.Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
+  let tidal_config = config.tidal_config
   use new_playlist <- result.try(tidal_api.create_playlist(
-    config,
+    tidal_config,
     playlist.title,
     playlist.description,
   ))
-  io.println("SEARCHING")
 
   let track_ids =
     playlist.songs
     |> list.map(fn(song) {
-      // For each Song, try to search and return Result(Int, String)
-      io.println("Searching for: " <> song.artist <> " " <> song.title)
       result.map(
-        tidal_api.search_track(config, song.artist, song.title),
+        tidal_api.search_track(tidal_config, song.artist, song.title),
         fn(track) { track.id },
       )
     })
@@ -160,7 +180,6 @@ pub fn create_tidal_playlist_from_openai(
       case r {
         Ok(id) -> Ok(id)
         Error(err) -> {
-          io.println("Skipping ")
           Error(Nil)
         }
       }
@@ -168,14 +187,11 @@ pub fn create_tidal_playlist_from_openai(
   list.map(track_ids, fn(x) { io.println(int.to_string(x)) })
 
   use _ <- result.try(tidal_api.add_tracks_to_playlist(
-    config,
+    tidal_config,
     new_playlist.id,
     track_ids,
     new_playlist.etag,
   ))
 
-  io.println(
-    "Added " <> int.to_string(list.length(track_ids)) <> " tracks to playlist.",
-  )
   Ok(Nil)
 }

@@ -12,6 +12,8 @@ pub type TidalAPIError {
   TidalUserIdMissing
   TidalCredentialsMissing
   TidalReadingConfigError
+  TidalWritingConfigError
+  OpenAICredentialsMissing
   OtherError(String)
 }
 
@@ -32,5 +34,7 @@ pub fn print_error(err: TidalAPIError) {
     TidalUserIdMissing -> io.println("Tidal user-id missing")
     TidalCredentialsMissing -> io.println("Tidal credentials missing")
     TidalReadingConfigError -> io.println("Error reading credentials file")
+    TidalWritingConfigError -> io.println("Error writing credentials file")
+    OpenAICredentialsMissing -> io.println("OpenAI credentials missing")
   }
 }

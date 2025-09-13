@@ -47,7 +47,8 @@ pub fn from_file_valid_test() {
     {
       \"client_id\": \"some_client_id\",
       \"client_secret\": \"some_client_secret\",
-      \"refresh_token\": \"some_refresh_token\"
+      \"refresh_token\": \"some_refresh_token\",
+      \"user_id\": 1
     }
   "
   let assert Ok(_) = simplifile.write(valid_json, to: filepath)
@@ -91,6 +92,20 @@ pub fn from_file_missing_refresh_token_test() {
     {
       \"client_id\": \"some_client_id\",
       \"client_id\": \"some_client_id\"
+    }
+  "
+  let assert Ok(_) = simplifile.write(valid_json, to: filepath)
+  let assert Error(errors.ParseError(_)) = config.from_file(filepath)
+}
+
+pub fn from_file_missing_user_id_test() {
+  let filepath = "/tmp/tidal_ai_playlist_test_" <> uuid.v4_string() <> ".json"
+  let valid_json =
+    "
+    {
+      \"client_id\": \"some_client_id\",
+      \"client_secret\": \"some_client_secret\",
+      \"refresh_token\": \"some_refresh_token\"
     }
   "
   let assert Ok(_) = simplifile.write(valid_json, to: filepath)
