@@ -134,19 +134,7 @@ fn create_playlist() {
     )
   case tidal_new_api.login(config) {
     Ok(_) -> io.println("OK")
-    Error(err) -> handle_tidal_error(err)
-  }
-}
-
-fn handle_tidal_error(err: errors.TidalAPIError) {
-  case err {
-    errors.HttpError(reason) -> io.println("Http Error: " <> reason)
-    errors.ParseError(reason) -> io.println("Parse Error: " <> reason)
-    errors.OtherError(reason) -> io.println("Other Error: " <> reason)
-    errors.UnexpectedResponseFormatError(reason) ->
-      io.println("Unexpected response error: " <> reason)
-    errors.TidalDeviceAuthorizationExpiredError ->
-      io.println("Device Authorization Expired")
+    Error(err) -> errors.print_error(err)
   }
 }
 

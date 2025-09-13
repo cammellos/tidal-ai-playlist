@@ -11,7 +11,7 @@ import tidal_ai_playlist/internal/tidal/types
 
 pub fn login(config: config.Config) -> Result(String, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
-  case get_login_url(config) {
+  case authorize_device(config) {
     Ok(device_authorization_response) -> {
       io.println(
         "authorization code: " <> device_authorization_response.user_code,
@@ -56,7 +56,7 @@ pub fn refresh_token(
   }
 }
 
-fn get_login_url(
+pub fn authorize_device(
   config: config.Config,
 ) -> Result(types.DeviceAuthorizationResponse, errors.TidalAPIError) {
   let http_client = http.default_client
@@ -64,6 +64,24 @@ fn get_login_url(
 
   case http_client(req) {
     Ok(response) -> decoders.decode_device_authorization_response(response.body)
+    Error(err) -> Error(err)
+  }
+}
+
+pub fn exchange_device_code_for_token(
+  config: config.Config,
+  device_code: String,
+) -> Result(types.OauthToken, errors.TidalAPIError) {
+  let http_client = http.default_client
+  let req = tidal_http.exchange_device_code_for_token(config, device_code)
+  case http_client(req) {
+    Ok(resp) ->
+      case resp.status {
+        200 -> decoders.decode_oauth_token_response(resp.body)
+        400 -> Error(errors.TidalDeviceAuthorizationNotReady)
+        _ -> Error(errors.OtherError("Unexpected status code from tidal api"))
+      }
+
     Error(err) -> Error(err)
   }
 }
@@ -78,33 +96,18 @@ fn poll_device_authorization(
   case remaining <= 0 {
     True -> Error(errors.TidalDeviceAuthorizationExpiredError)
     False -> {
-      let req =
-        tidal_http.exchange_device_code_for_token(config, device.device_code)
-      case client(req) {
-        Ok(resp) ->
-          case resp.status {
-            200 -> decoders.decode_oauth_token_response(resp.body)
-            400 -> {
-              process.sleep(interval * 1000)
-              poll_device_authorization(
-                remaining - interval,
-                interval,
-                config,
-                device,
-                client,
-              )
-            }
-            _ -> {
-              process.sleep(interval * 1000)
-              poll_device_authorization(
-                remaining - interval,
-                interval,
-                config,
-                device,
-                client,
-              )
-            }
-          }
+      case exchange_device_code_for_token(config, device.device_code) {
+        Ok(response) -> Ok(response)
+        Error(errors.TidalDeviceAuthorizationNotReady) -> {
+          process.sleep(interval * 1000)
+          poll_device_authorization(
+            remaining - interval,
+            interval,
+            config,
+            device,
+            client,
+          )
+        }
         Error(err) -> Error(err)
       }
     }
