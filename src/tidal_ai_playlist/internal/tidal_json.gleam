@@ -26,7 +26,7 @@ fn refresh_token_response_decoder() -> decode.Decoder(RefreshTokenResponse) {
 
 pub fn decode_refresh_token_response(
   body: String,
-) -> Result(RefreshTokenResponse, errors.TidalError) {
+) -> Result(RefreshTokenResponse, errors.TidalAPIError) {
   case json.parse(from: body, using: refresh_token_response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->
@@ -68,7 +68,7 @@ fn search_track_response_decoder() -> decode.Decoder(SearchTrackResponse) {
 
 pub fn decode_search_track_response(
   body: String,
-) -> Result(SearchTrackResponse, errors.TidalError) {
+) -> Result(SearchTrackResponse, errors.TidalAPIError) {
   case json.parse(from: body, using: search_track_response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) -> {
@@ -93,7 +93,7 @@ fn create_playlist_response_decoder() -> decode.Decoder(CreatePlaylistResponse) 
 
 pub fn decode_create_playlist_response(
   body: String,
-) -> Result(CreatePlaylistResponse, errors.TidalError) {
+) -> Result(CreatePlaylistResponse, errors.TidalAPIError) {
   case json.parse(from: body, using: create_playlist_response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) -> {
@@ -111,7 +111,7 @@ pub type AddTracksToPlaylistResponse {
 
 pub fn decode_add_tracks_to_playlist_response(
   body: String,
-) -> Result(AddTracksToPlaylistResponse, errors.TidalError) {
+) -> Result(AddTracksToPlaylistResponse, errors.TidalAPIError) {
   Ok(AddTracksToPlaylistResponse(body: body))
   //case json.parse(from: body, using: create_playlist_response_decoder()) {
   //  Ok(decoded_response) -> Ok(decoded_response)

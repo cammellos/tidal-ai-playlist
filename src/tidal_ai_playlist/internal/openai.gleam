@@ -56,7 +56,7 @@ pub fn encode_responses_input(input: List(ResponsesInput)) -> json.Json {
 pub fn responses(
   input: List(ResponsesInput),
   config: Config,
-) -> Result(Response, errors.TidalError) {
+) -> Result(Response, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, tidal_http.default_client)
   let req = build_request(input, config)
   case http_client(req) {
@@ -74,7 +74,7 @@ pub fn model_to_string(model: Model) -> String {
   }
 }
 
-fn decode_response(body: String) -> Result(Response, errors.TidalError) {
+fn decode_response(body: String) -> Result(Response, errors.TidalAPIError) {
   case json.parse(from: body, using: response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->

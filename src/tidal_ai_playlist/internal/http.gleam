@@ -8,7 +8,7 @@ import gleam/result
 import tidal_ai_playlist/internal/errors
 
 pub type Client =
-  fn(request.Request(String)) -> Result(HttpResponse, errors.TidalError)
+  fn(request.Request(String)) -> Result(HttpResponse, errors.TidalAPIError)
 
 pub fn error_to_string(error: httpc.HttpError) -> String {
   case error {
@@ -24,7 +24,7 @@ pub type HttpResponse {
 
 pub fn default_client(
   req: request.Request(String),
-) -> Result(HttpResponse, errors.TidalError) {
+) -> Result(HttpResponse, errors.TidalAPIError) {
   let response =
     httpc.configure()
     |> httpc.timeout(60_000)

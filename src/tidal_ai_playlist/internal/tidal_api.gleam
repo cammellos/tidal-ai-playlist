@@ -40,7 +40,7 @@ pub fn do_refresh_token(
   client_id: String,
   client_secret: String,
   refresh_token: String,
-) -> Result(tidal_json.RefreshTokenResponse, errors.TidalError) {
+) -> Result(tidal_json.RefreshTokenResponse, errors.TidalAPIError) {
   let sender = tidal_http.default_client
   case sender(exchange_refresh_token(client_id, client_secret, refresh_token)) {
     Ok(response) -> tidal_json.decode_refresh_token_response(response.body)
@@ -53,7 +53,7 @@ pub fn do_search_track(
   song: String,
   access_token: String,
   session_id: String,
-) -> Result(tidal_json.SearchTrackResponse, errors.TidalError) {
+) -> Result(tidal_json.SearchTrackResponse, errors.TidalAPIError) {
   let sender = tidal_http.default_client
   case sender(search_track(artist, song, access_token, session_id)) {
     Ok(response) -> tidal_json.decode_search_track_response(response.body)
@@ -75,7 +75,7 @@ pub fn do_create_playlist(
   description: String,
   access_token: String,
   session_id: String,
-) -> Result(tidal_json.CreatePlaylistResponse, errors.TidalError) {
+) -> Result(tidal_json.CreatePlaylistResponse, errors.TidalAPIError) {
   let sender = tidal_http.default_client
   case
     sender(create_playlist(
@@ -199,7 +199,7 @@ pub fn do_add_tracks_to_playlist(
   access_token: String,
   session_id: String,
   etag: String,
-) -> Result(tidal_json.AddTracksToPlaylistResponse, errors.TidalError) {
+) -> Result(tidal_json.AddTracksToPlaylistResponse, errors.TidalAPIError) {
   let sender = tidal_http.default_client
   case
     sender(add_tracks_to_playlist(

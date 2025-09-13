@@ -1,4 +1,4 @@
-pub type TidalError {
+pub type TidalAPIError {
   HttpError(String)
   ParseError(String)
   TidalDeviceAuthorizationExpiredError

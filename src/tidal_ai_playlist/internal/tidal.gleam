@@ -44,14 +44,14 @@ pub type Config {
   Config(client_id: String, client_secret: String)
 }
 
-pub fn login(config: Config) -> Result(String, errors.TidalError) {
+pub fn login(config: Config) -> Result(String, errors.TidalAPIError) {
   login_with_sender(config, tidal_http.default_client)
 }
 
 pub fn login_with_sender(
   config: Config,
   sender: tidal_http.Client,
-) -> Result(String, errors.TidalError) {
+) -> Result(String, errors.TidalAPIError) {
   case get_login_url(config, sender) {
     Ok(device_authorization_response) -> {
       io.println(
@@ -89,7 +89,7 @@ pub fn login_with_sender(
 fn get_login_url(
   config: Config,
   sender: tidal_http.Client,
-) -> Result(DeviceAuthorizationResponse, errors.TidalError) {
+) -> Result(DeviceAuthorizationResponse, errors.TidalAPIError) {
   let req = tidal_api.authorize_device(config.client_id)
 
   case sender(req) {
@@ -123,7 +123,7 @@ fn device_authorization_decoder() -> decode.Decoder(DeviceAuthorizationResponse)
 
 fn decode_device_authorization_response(
   body: String,
-) -> Result(DeviceAuthorizationResponse, errors.TidalError) {
+) -> Result(DeviceAuthorizationResponse, errors.TidalAPIError) {
   case json.parse(from: body, using: device_authorization_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->
@@ -135,7 +135,7 @@ fn decode_device_authorization_response(
 
 fn decode_oauth_token_response(
   body: String,
-) -> Result(OauthToken, errors.TidalError) {
+) -> Result(OauthToken, errors.TidalAPIError) {
   case json.parse(from: body, using: oauth_token_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->
@@ -148,7 +148,7 @@ fn decode_oauth_token_response(
 pub type PollResult {
   PollResultContinue
   PollResultSuccess(String)
-  PollResultError(errors.TidalError)
+  PollResultError(errors.TidalAPIError)
 }
 
 fn poll_http_request(
@@ -181,7 +181,7 @@ fn do_poll_device_authorization(
   config: Config,
   device_authorization: DeviceAuthorizationResponse,
   sender: tidal_http.Client,
-) -> Result(OauthToken, errors.TidalError) {
+) -> Result(OauthToken, errors.TidalAPIError) {
   case poll_http_request(config, device_authorization, sender) {
     PollResultSuccess(body) -> {
       decode_oauth_token_response(body)

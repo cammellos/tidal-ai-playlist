@@ -42,7 +42,7 @@ pub fn main() -> Nil {
   Nil
 }
 
-pub fn interactive_playlist() -> Result(Playlist, errors.TidalError) {
+pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
   let api_key = result.unwrap(envoy.get("OPENAI_API_KEY"), "")
   let config =
     openai.Config(
@@ -63,7 +63,7 @@ pub fn interactive_playlist() -> Result(Playlist, errors.TidalError) {
 fn interactive_loop(
   config: openai.Config,
   messages: List(openai.ResponsesInput),
-) -> Result(Playlist, errors.TidalError) {
+) -> Result(Playlist, errors.TidalAPIError) {
   // Ask OpenAI for a playlist suggestion
   case openai.responses(messages, config) {
     Ok(reply_response) -> {
@@ -128,7 +128,7 @@ fn create_playlist(playlist: Playlist) {
   }
 }
 
-fn handle_tidal_error(err: errors.TidalError) {
+fn handle_tidal_error(err: errors.TidalAPIError) {
   case err {
     errors.HttpError(reason) -> io.println("Http Error: " <> reason)
     errors.ParseError(reason) -> io.println("Parse Error: " <> reason)
@@ -231,7 +231,7 @@ pub fn create_tidal_playlist_from_openai(
   refresh_token: String,
   session_id: String,
   playlist: Playlist,
-) -> Result(Nil, errors.TidalError) {
+) -> Result(Nil, errors.TidalAPIError) {
   // 1. Refresh token
   use token <- result.try(tidal_api.do_refresh_token(
     client_id,
