@@ -3,9 +3,11 @@ import gleam/http/request
 import gleam/httpc
 import gleam/int
 import gleam/io
+import gleam/list
+import gleam/result
 import tidal_ai_playlist/internal/errors
 
-pub type Sender =
+pub type Client =
   fn(request.Request(String)) -> Result(HttpResponse, errors.TidalError)
 
 pub fn error_to_string(error: httpc.HttpError) -> String {
@@ -17,14 +19,31 @@ pub fn error_to_string(error: httpc.HttpError) -> String {
 }
 
 pub type HttpResponse {
-  HttpResponse(status: Int, body: String)
+  HttpResponse(status: Int, body: String, etag: String)
 }
 
-pub fn default_sender(
+pub fn default_client(
   req: request.Request(String),
 ) -> Result(HttpResponse, errors.TidalError) {
-  case httpc.send(req) {
-    Ok(resp) -> Ok(HttpResponse(status: resp.status, body: resp.body))
-    Error(err) -> Error(errors.HttpError("Failed: " <> error_to_string(err)))
+  let response =
+    httpc.configure()
+    |> httpc.timeout(60_000)
+    |> httpc.dispatch(req)
+  case response {
+    Ok(resp) -> {
+      let etag =
+        list.find_map(resp.headers, fn(pair) {
+          let #(header, value) = pair
+          case header {
+            "etag" -> Ok(value)
+            _ -> Error(Nil)
+          }
+        })
+        |> result.unwrap("")
+      Ok(HttpResponse(status: resp.status, body: resp.body, etag: etag))
+    }
+    Error(err) -> {
+      Error(errors.HttpError("Failed: " <> error_to_string(err)))
+    }
   }
 }

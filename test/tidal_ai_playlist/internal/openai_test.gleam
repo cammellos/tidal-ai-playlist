@@ -15,7 +15,7 @@ pub fn model_to_string_test() {
   assert openai.model_to_string(openai.Other("custom-model")) == "custom-model"
 }
 
-pub fn responses_with_sender_returns_decoded_response_test() {
+pub fn responses_returns_decoded_response_test() {
   let fake_body =
     "
       {
@@ -31,14 +31,14 @@ pub fn responses_with_sender_returns_decoded_response_test() {
       }
       "
 
-  let fake_sender: http.Sender = fn(_req) {
-    Ok(http.HttpResponse(status: 200, body: fake_body))
+  let fake_sender: http.Client = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
 
   let response =
-    openai.responses("input text", config, option.Some(fake_sender))
+    openai.responses([openai.ResponsesInput(role: "user", content: "input text")], config)
   assert response
     == Ok(
       openai.Response(id: "resp1", output: [
@@ -47,27 +47,27 @@ pub fn responses_with_sender_returns_decoded_response_test() {
     )
 }
 
-pub fn responses_with_sender_malformed_test() {
+pub fn responses_malformed_test() {
   let fake_body = "malformed"
 
-  let fake_sender: http.Sender = fn(_req) {
-    Ok(http.HttpResponse(status: 200, body: fake_body))
+  let fake_sender: http.Client = fn(_req) {
+    Ok(http.HttpResponse(status: 200, body: fake_body, etag: ""))
   }
 
-  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
 
   let response =
-    openai.responses("input text", config, option.Some(fake_sender))
+    openai.responses([openai.ResponsesInput(role: "user", content: "input text")], config)
   assert Error(errors.ParseError("Failed to parse json: unexpected byte 0x6D"))
     == response
 }
 
-pub fn responses_with_sender_propagates_http_errors_test() {
-  let fake_sender: http.Sender = fn(_req) {
+pub fn responses_propagates_http_errors_test() {
+  let fake_sender: http.Client = fn(_req) {
     Error(errors.HttpError("network down"))
   }
-  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key")
+  let config = openai.Config(openai.Gpt4o, "instructions", "dummy_api_key", option.Some(fake_sender))
 
-  let response = openai.responses_with_sender("input text", config, fake_sender)
+  let response = openai.responses([openai.ResponsesInput(role: "user", content: "input text")], config)
   assert response == Error(errors.HttpError("network down"))
 }

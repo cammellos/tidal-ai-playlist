@@ -8,16 +8,7 @@ import gleam/json
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http as tidal_http
 import tidal_ai_playlist/internal/json as tidal_json
-
-const scope = "r_usr w_usr w_sub"
-
-const device_code_grant_type = "urn:ietf:params:oauth:grant-type:device_code"
-
-const base_host = "auth.tidal.com"
-
-const device_authorization_path = "/v1/oauth2/device_authorization"
-
-const token_path = "/v1/oauth2/token"
+import tidal_ai_playlist/internal/tidal_api
 
 type DeviceAuthorizationResponse {
   DeviceAuthorizationResponse(
@@ -54,12 +45,12 @@ pub type Config {
 }
 
 pub fn login(config: Config) -> Result(String, errors.TidalError) {
-  login_with_sender(config, tidal_http.default_sender)
+  login_with_sender(config, tidal_http.default_client)
 }
 
 pub fn login_with_sender(
   config: Config,
-  sender: tidal_http.Sender,
+  sender: tidal_http.Client,
 ) -> Result(String, errors.TidalError) {
   case get_login_url(config, sender) {
     Ok(device_authorization_response) -> {
@@ -97,9 +88,9 @@ pub fn login_with_sender(
 
 fn get_login_url(
   config: Config,
-  sender: tidal_http.Sender,
+  sender: tidal_http.Client,
 ) -> Result(DeviceAuthorizationResponse, errors.TidalError) {
-  let req = build_login_url_request(config)
+  let req = tidal_api.authorize_device(config.client_id)
 
   case sender(req) {
     Ok(response) -> decode_device_authorization_response(response.body)
@@ -163,9 +154,14 @@ pub type PollResult {
 fn poll_http_request(
   config: Config,
   device_authorization_response: DeviceAuthorizationResponse,
-  sender: tidal_http.Sender,
+  sender: tidal_http.Client,
 ) -> PollResult {
-  let req = build_poll_request(config, device_authorization_response)
+  let req =
+    tidal_api.exchange_device_code_for_token(
+      config.client_id,
+      config.client_secret,
+      device_authorization_response.device_code,
+    )
 
   case sender(req) {
     Ok(response) -> {
@@ -179,36 +175,12 @@ fn poll_http_request(
   }
 }
 
-fn build_poll_request(
-  config: Config,
-  device_authorization_response: DeviceAuthorizationResponse,
-) -> request.Request(String) {
-  let body =
-    "client_id="
-    <> config.client_id
-    <> "&scope="
-    <> scope
-    <> "&client_secret="
-    <> config.client_secret
-    <> "&device_code="
-    <> device_authorization_response.device_code
-    <> "&grant_type="
-    <> device_code_grant_type
-  request.new()
-  |> request.set_scheme(http.Https)
-  |> request.set_host(base_host)
-  |> request.set_path(token_path)
-  |> request.prepend_header("Content-Type", "application/x-www-form-urlencoded")
-  |> request.set_method(http.Post)
-  |> request.set_body(body)
-}
-
 fn do_poll_device_authorization(
   remaining: Int,
   interval: Int,
   config: Config,
   device_authorization: DeviceAuthorizationResponse,
-  sender: tidal_http.Sender,
+  sender: tidal_http.Client,
 ) -> Result(OauthToken, errors.TidalError) {
   case poll_http_request(config, device_authorization, sender) {
     PollResultSuccess(body) -> {
@@ -231,15 +203,4 @@ fn do_poll_device_authorization(
     }
     PollResultError(err) -> Error(err)
   }
-}
-
-fn build_login_url_request(config: Config) -> request.Request(String) {
-  let body = "client_id=" <> config.client_id <> "&scope=r_usr w_usr w_sub"
-  request.new()
-  |> request.set_scheme(http.Https)
-  |> request.set_host(base_host)
-  |> request.set_path(device_authorization_path)
-  |> request.prepend_header("Content-Type", "application/x-www-form-urlencoded")
-  |> request.set_method(http.Post)
-  |> request.set_body(body)
 }

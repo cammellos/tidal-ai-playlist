@@ -2,6 +2,7 @@ import gleam/dynamic/decode
 import gleam/http
 import gleam/http/request
 import gleam/json
+import gleam/list
 import gleam/option
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http as tidal_http
@@ -12,7 +13,12 @@ const host = "api.openai.com"
 const responses_path = "/v1/responses"
 
 pub type Config {
-  Config(model: Model, instructions: String, api_key: String)
+  Config(
+    model: Model,
+    instructions: String,
+    api_key: String,
+    http_client: option.Option(tidal_http.Client),
+  )
 }
 
 pub type Model {
@@ -34,23 +40,26 @@ pub type Response {
   Response(id: String, output: List(Output))
 }
 
-pub fn responses(
-  input: String,
-  config: Config,
-  sender: option.Option(tidal_http.Sender),
-) -> Result(Response, errors.TidalError) {
-  let actual_sender = option.unwrap(sender, tidal_http.default_sender)
-  responses_with_sender(input, config, actual_sender)
+pub type ResponsesInput {
+  ResponsesInput(role: String, content: String)
 }
 
-pub fn responses_with_sender(
-  input: String,
-  config: Config,
-  sender: tidal_http.Sender,
-) -> Result(Response, errors.TidalError) {
-  let req = build_request(input, config)
+pub fn encode_responses_input(input: List(ResponsesInput)) -> json.Json {
+  json.array(input, fn(x) {
+    json.object([
+      #("role", json.string(x.role)),
+      #("content", json.string(x.content)),
+    ])
+  })
+}
 
-  case sender(req) {
+pub fn responses(
+  input: List(ResponsesInput),
+  config: Config,
+) -> Result(Response, errors.TidalError) {
+  let http_client = option.unwrap(config.http_client, tidal_http.default_client)
+  let req = build_request(input, config)
+  case http_client(req) {
     Ok(response) -> decode_response(response.body)
     Error(err) -> Error(err)
   }
@@ -75,12 +84,15 @@ fn decode_response(body: String) -> Result(Response, errors.TidalError) {
   }
 }
 
-fn build_request(input: String, config: Config) -> request.Request(String) {
+fn build_request(
+  input: List(ResponsesInput),
+  config: Config,
+) -> request.Request(String) {
   let body =
     json.object([
       #("model", json.string(model_to_string(config.model))),
       #("instructions", json.string(config.instructions)),
-      #("input", json.string(input)),
+      #("input", encode_responses_input(input)),
     ])
     |> json.to_string
 
