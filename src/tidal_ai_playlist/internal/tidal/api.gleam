@@ -1,9 +1,11 @@
 import gleam/erlang/process
 import gleam/io
 import gleam/option
+import gleam/result
 
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http
+import tidal_ai_playlist/internal/option as tidal_ai_playlist_option
 import tidal_ai_playlist/internal/tidal/config
 import tidal_ai_playlist/internal/tidal/decoders
 import tidal_ai_playlist/internal/tidal/http as tidal_http
@@ -47,8 +49,11 @@ pub fn login(config: config.Config) -> Result(String, errors.TidalAPIError) {
 
 pub fn refresh_token(
   config: config.Config,
-  refresh_token: String,
 ) -> Result(types.RefreshTokenResponse, errors.TidalAPIError) {
+  use refresh_token <- result.try(tidal_ai_playlist_option.from_option(
+    config.refresh_token,
+    errors.TidalRefreshTokenMissing,
+  ))
   let http_client = option.unwrap(config.http_client, http.default_client)
   case http_client(tidal_http.exchange_refresh_token(config, refresh_token)) {
     Ok(response) -> decoders.decode_refresh_token_response(response.body)
@@ -88,19 +93,26 @@ pub fn exchange_device_code_for_token(
 
 pub fn create_playlist(
   config: config.Config,
-  token: types.RefreshTokenResponse,
   title: String,
   description: String,
-  session_id: String,
 ) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
+  use access_token <- result.try(tidal_ai_playlist_option.from_option(
+    config.access_token,
+    errors.TidalAccessTokenMissing,
+  ))
+  use user_id <- result.try(tidal_ai_playlist_option.from_option(
+    config.user_id,
+    errors.TidalUserIdMissing,
+  ))
+
   case
     http_client(tidal_http.create_playlist(
-      token.user_id,
+      user_id,
       title,
       description,
-      token.access_token,
-      session_id,
+      access_token,
+      config.session_id,
     ))
   {
     Ok(response) -> {
@@ -119,18 +131,21 @@ pub fn create_playlist(
 
 pub fn search_track(
   config: config.Config,
-  token: types.RefreshTokenResponse,
   artist: String,
   song: String,
-  session_id: String,
 ) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
+  use access_token <- result.try(tidal_ai_playlist_option.from_option(
+    config.access_token,
+    errors.TidalAccessTokenMissing,
+  ))
+
   case
     http_client(tidal_http.search_track(
       artist,
       song,
-      token.access_token,
-      session_id,
+      access_token,
+      config.session_id,
     ))
   {
     Ok(response) -> decoders.decode_search_track_response(response.body)
@@ -140,20 +155,23 @@ pub fn search_track(
 
 pub fn add_tracks_to_playlist(
   config: config.Config,
-  token: types.RefreshTokenResponse,
   playlist_id: String,
   song_ids: List(Int),
-  session_id: String,
   etag: String,
 ) -> Result(String, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
+  use access_token <- result.try(tidal_ai_playlist_option.from_option(
+    config.access_token,
+    errors.TidalAccessTokenMissing,
+  ))
+
   case
     http_client(tidal_http.add_tracks_to_playlist(
       playlist_id,
       song_ids,
-      token.access_token,
+      access_token,
       etag,
-      session_id,
+      config.session_id,
     ))
   {
     Ok(response) -> Ok(response.body)

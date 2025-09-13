@@ -26,25 +26,27 @@ Wrap the playlist between exactly these separator lines:
 pub fn main() -> Nil {
   //create_playlist()
   let assert Ok(playlist) = interactive_playlist()
+  let assert Ok(tidal_config) = load_tidal_config()
+  create_tidal_playlist_from_openai(tidal_config, playlist)
+  Nil
+}
+
+fn load_tidal_config() -> Result(tidal_config.Config, errors.TidalAPIError) {
   let refresh_token =
     "***REMOVED***"
   let client_id = "***REMOVED***"
   let client_secret = "***REMOVED***"
-  let session_id = "2dc6cd75-7c6f-4943-b7a6-5807ea8862ae"
-  let tidal_config =
-    tidal_config.Config(
-      client_id: client_id,
-      client_secret: client_secret,
-      http_client: option.None,
-    )
 
-  create_tidal_playlist_from_openai(
-    tidal_config,
-    refresh_token,
-    session_id,
-    playlist,
-  )
-  Nil
+  let config =
+    tidal_config.new(client_id, client_secret)
+    |> tidal_config.add_refresh_token(refresh_token)
+
+  use access_token_response <- result.try(tidal_api.refresh_token(config))
+
+  config
+  |> tidal_config.add_access_token(access_token_response.access_token)
+  |> tidal_config.add_user_id(access_token_response.user_id)
+  |> Ok
 }
 
 pub fn interactive_playlist() -> Result(Playlist, errors.TidalAPIError) {
@@ -125,12 +127,7 @@ pub type Playlist {
 fn create_playlist() {
   let client_id = result.unwrap(envoy.get("TIDAL_CLIENT_ID"), "")
   let client_secret = result.unwrap(envoy.get("TIDAL_CLIENT_SECRET"), "")
-  let config =
-    tidal_config.Config(
-      client_id: client_id,
-      client_secret: client_secret,
-      http_client: option.None,
-    )
+  let config = tidal_config.new(client_id, client_secret)
   case tidal_api.login(config) {
     Ok(_) -> io.println("OK")
     Error(err) -> errors.print_error(err)
@@ -174,20 +171,13 @@ fn parse_playlist(playlist: String) -> List(Song) {
 
 pub fn create_tidal_playlist_from_openai(
   config: tidal_config.Config,
-  refresh_token: String,
-  session_id: String,
   playlist: Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
-  // 1. Refresh token
-  use token <- result.try(tidal_api.refresh_token(config, refresh_token))
-
   // 2. Create the playlist on Tidal
   use new_playlist <- result.try(tidal_api.create_playlist(
     config,
-    token,
     playlist.title,
     playlist.description,
-    session_id,
   ))
   io.println("SEARCHING")
 
@@ -198,13 +188,7 @@ pub fn create_tidal_playlist_from_openai(
       // For each Song, try to search and return Result(Int, String)
       io.println("Searching for: " <> song.artist <> " " <> song.title)
       result.map(
-        tidal_api.search_track(
-          config,
-          token,
-          song.artist,
-          song.title,
-          session_id,
-        ),
+        tidal_api.search_track(config, song.artist, song.title),
         fn(track) { track.id },
       )
     })
@@ -222,10 +206,8 @@ pub fn create_tidal_playlist_from_openai(
   // 4. Add tracks to playlist
   use _ <- result.try(tidal_api.add_tracks_to_playlist(
     config,
-    token,
     new_playlist.id,
     track_ids,
-    session_id,
     new_playlist.etag,
   ))
 

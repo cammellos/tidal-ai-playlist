@@ -6,6 +6,10 @@ pub type TidalAPIError {
   UnexpectedResponseFormatError(String)
   TidalDeviceAuthorizationExpiredError
   TidalDeviceAuthorizationNotReady
+  TidalRefreshTokenMissing
+  TidalAccessTokenMissing
+  TidalSessionIdMissing
+  TidalUserIdMissing
   OtherError(String)
 }
 
@@ -20,5 +24,9 @@ pub fn print_error(err: TidalAPIError) {
       io.println("Unexpected response error: " <> reason)
     TidalDeviceAuthorizationExpiredError ->
       io.println("Device Authorization Expired")
+    TidalRefreshTokenMissing -> io.println("Tidal refresh token missing")
+    TidalAccessTokenMissing -> io.println("Tidal access token missing")
+    TidalSessionIdMissing -> io.println("Tidal session-id missing")
+    TidalUserIdMissing -> io.println("Tidal user-id missing")
   }
 }

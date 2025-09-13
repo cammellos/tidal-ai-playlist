@@ -1,8 +1,5 @@
-import gleam/http
 import gleam/http/request
 import gleam/httpc
-import gleam/int
-import gleam/io
 import gleam/list
 import gleam/result
 import tidal_ai_playlist/internal/errors
