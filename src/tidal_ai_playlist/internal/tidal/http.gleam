@@ -5,7 +5,7 @@ import gleam/list
 import gleam/string
 import gleam/uri
 
-import tidal_ai_playlist/internal/tidal/config
+import tidal_ai_playlist/internal/tidal/types
 
 const base_api_host = "api.tidal.com"
 
@@ -35,7 +35,7 @@ pub fn authorize_device(client_id: String) -> request.Request(String) {
 }
 
 pub fn exchange_device_code_for_token(
-  config: config.Config,
+  config: types.Config,
   device_code: String,
 ) -> request.Request(String) {
   let body =
@@ -57,7 +57,7 @@ pub fn exchange_device_code_for_token(
 }
 
 pub fn exchange_refresh_token(
-  config: config.Config,
+  config: types.Config,
   refresh_token: String,
 ) -> request.Request(String) {
   let body =

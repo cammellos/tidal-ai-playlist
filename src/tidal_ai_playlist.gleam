@@ -12,6 +12,7 @@ import tidal_ai_playlist/internal/openai/config as openai_config
 import tidal_ai_playlist/internal/openai/types as openai_types
 import tidal_ai_playlist/internal/tidal/api as tidal_api
 import tidal_ai_playlist/internal/tidal/config as tidal_config
+import tidal_ai_playlist/internal/tidal/types as tidal_types
 
 const instructions = "You are a music recommendation assistant.
 
@@ -31,7 +32,7 @@ pub fn main() -> Nil {
   Nil
 }
 
-fn load_tidal_config() -> Result(tidal_config.Config, errors.TidalAPIError) {
+fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAPIError) {
   let refresh_token =
     "***REMOVED***"
   let client_id = "***REMOVED***"
@@ -170,7 +171,7 @@ fn parse_playlist(playlist: String) -> List(Song) {
 }
 
 pub fn create_tidal_playlist_from_openai(
-  config: tidal_config.Config,
+  config: tidal_types.Config,
   playlist: Playlist,
 ) -> Result(Nil, errors.TidalAPIError) {
   // 2. Create the playlist on Tidal

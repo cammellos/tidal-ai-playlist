@@ -11,7 +11,9 @@ import tidal_ai_playlist/internal/tidal/decoders
 import tidal_ai_playlist/internal/tidal/http as tidal_http
 import tidal_ai_playlist/internal/tidal/types
 
-pub fn login(config: config.Config) -> Result(String, errors.TidalAPIError) {
+pub fn login(
+  config: types.Config,
+) -> Result(types.OauthToken, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
   case authorize_device(config) {
     Ok(device_authorization_response) -> {
@@ -19,28 +21,17 @@ pub fn login(config: config.Config) -> Result(String, errors.TidalAPIError) {
         "authorization code: " <> device_authorization_response.user_code,
       )
       io.println(
-        "please login at: "
+        "Please login at: "
         <> device_authorization_response.verification_uri
         <> " and paste the code above.",
       )
-      case
-        poll_device_authorization(
-          device_authorization_response.expires_in,
-          device_authorization_response.interval,
-          config,
-          device_authorization_response,
-          http_client,
-        )
-      {
-        Ok(oauth_token) -> {
-          io.println("oauth token fetched successfully: ")
-          io.println("access_token: " <> oauth_token.access_token)
-          io.println("refresh_token: " <> oauth_token.refresh_token)
-
-          Ok("success")
-        }
-        Error(err) -> Error(err)
-      }
+      poll_device_authorization(
+        device_authorization_response.expires_in,
+        device_authorization_response.interval,
+        config,
+        device_authorization_response,
+        http_client,
+      )
     }
 
     Error(err) -> Error(err)
@@ -48,7 +39,7 @@ pub fn login(config: config.Config) -> Result(String, errors.TidalAPIError) {
 }
 
 pub fn refresh_token(
-  config: config.Config,
+  config: types.Config,
 ) -> Result(types.RefreshTokenResponse, errors.TidalAPIError) {
   use refresh_token <- result.try(tidal_ai_playlist_option.from_option(
     config.refresh_token,
@@ -62,7 +53,7 @@ pub fn refresh_token(
 }
 
 pub fn authorize_device(
-  config: config.Config,
+  config: types.Config,
 ) -> Result(types.DeviceAuthorizationResponse, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
   let req = tidal_http.authorize_device(config.client_id)
@@ -74,7 +65,7 @@ pub fn authorize_device(
 }
 
 pub fn exchange_device_code_for_token(
-  config: config.Config,
+  config: types.Config,
   device_code: String,
 ) -> Result(types.OauthToken, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
@@ -92,7 +83,7 @@ pub fn exchange_device_code_for_token(
 }
 
 pub fn create_playlist(
-  config: config.Config,
+  config: types.Config,
   title: String,
   description: String,
 ) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
@@ -130,7 +121,7 @@ pub fn create_playlist(
 }
 
 pub fn search_track(
-  config: config.Config,
+  config: types.Config,
   artist: String,
   song: String,
 ) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
@@ -154,7 +145,7 @@ pub fn search_track(
 }
 
 pub fn add_tracks_to_playlist(
-  config: config.Config,
+  config: types.Config,
   playlist_id: String,
   song_ids: List(Int),
   etag: String,
@@ -182,7 +173,7 @@ pub fn add_tracks_to_playlist(
 fn poll_device_authorization(
   remaining: Int,
   interval: Int,
-  config: config.Config,
+  config: types.Config,
   device: types.DeviceAuthorizationResponse,
   client: http.Client,
 ) -> Result(types.OauthToken, errors.TidalAPIError) {

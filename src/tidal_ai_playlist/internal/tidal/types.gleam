@@ -1,3 +1,6 @@
+import gleam/option
+import tidal_ai_playlist/internal/http
+
 pub type DeviceAuthorizationResponse {
   DeviceAuthorizationResponse(
     device_code: String,
@@ -32,4 +35,16 @@ pub type SearchTrackResponse {
 
 pub type TopHit {
   TopHit(id: Int, title: String)
+}
+
+pub type Config {
+  Config(
+    client_id: String,
+    client_secret: String,
+    refresh_token: option.Option(String),
+    user_id: option.Option(Int),
+    access_token: option.Option(String),
+    session_id: String,
+    http_client: option.Option(http.Client),
+  )
 }

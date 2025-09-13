@@ -1,5 +1,6 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/option
 
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/json as tidal_ai_playlist_json
@@ -58,6 +59,17 @@ pub fn decode_search_track_response(
   body: String,
 ) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
   case json.parse(from: body, using: search_track_response_decoder()) {
+    Ok(decoded_response) -> Ok(decoded_response)
+    Error(err) -> {
+      Error(errors.ParseError(
+        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
+      ))
+    }
+  }
+}
+
+pub fn decode_config(text: String) -> Result(types.Config, errors.TidalAPIError) {
+  case json.parse(from: text, using: config_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) -> {
       Error(errors.ParseError(
@@ -151,5 +163,22 @@ fn value_decoder() -> decode.Decoder(types.TopHit) {
     use id <- decode.field("id", decode.int)
     use title <- decode.field("title", decode.string)
     decode.success(types.TopHit(id: id, title: title))
+  }
+}
+
+fn config_decoder() -> decode.Decoder(types.Config) {
+  {
+    use client_id <- decode.field("client_id", decode.string)
+    use client_secret <- decode.field("client_secret", decode.string)
+    use refresh_token <- decode.field("refresh_token", decode.string)
+    decode.success(types.Config(
+      client_id: client_id,
+      client_secret: client_secret,
+      refresh_token: option.Some(refresh_token),
+      access_token: option.None,
+      user_id: option.None,
+      http_client: option.None,
+      session_id: "",
+    ))
   }
 }
