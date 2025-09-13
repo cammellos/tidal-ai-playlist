@@ -37,6 +37,10 @@ pub type TopHit {
   TopHit(id: Int, title: String)
 }
 
+pub type AddTracksToPlaylistResponse {
+  AddTracksToPlaylistResponse(last_updated: Int, added_item_ids: List(Int))
+}
+
 pub type Config {
   Config(
     client_id: String,

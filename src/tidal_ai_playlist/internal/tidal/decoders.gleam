@@ -9,74 +9,41 @@ import tidal_ai_playlist/internal/tidal/types
 pub fn decode_device_authorization_response(
   body: String,
 ) -> Result(types.DeviceAuthorizationResponse, errors.TidalAPIError) {
-  case json.parse(from: body, using: device_authorization_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) ->
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-  }
+  decode_json(body, device_authorization_decoder())
 }
 
 pub fn decode_oauth_token_response(
   body: String,
 ) -> Result(types.OauthToken, errors.TidalAPIError) {
-  case json.parse(from: body, using: oauth_token_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) ->
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-  }
+  decode_json(body, oauth_token_decoder())
 }
 
 pub fn decode_refresh_token_response(
   body: String,
 ) -> Result(types.RefreshTokenResponse, errors.TidalAPIError) {
-  case json.parse(from: body, using: refresh_token_response_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) ->
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-  }
+  decode_json(body, refresh_token_response_decoder())
 }
 
 pub fn decode_create_playlist_response(
   body: String,
 ) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
-  case json.parse(from: body, using: create_playlist_response_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) -> {
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-    }
-  }
+  decode_json(body, create_playlist_response_decoder())
 }
 
 pub fn decode_search_track_response(
   body: String,
 ) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
-  case json.parse(from: body, using: search_track_response_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) -> {
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-    }
-  }
+  decode_json(body, search_track_response_decoder())
+}
+
+pub fn decode_add_tracks_to_playlist(
+  text: String,
+) -> Result(types.AddTracksToPlaylistResponse, errors.TidalAPIError) {
+  decode_json(text, add_tracks_to_playlist_decoder())
 }
 
 pub fn decode_config(text: String) -> Result(types.Config, errors.TidalAPIError) {
-  case json.parse(from: text, using: config_decoder()) {
-    Ok(decoded_response) -> Ok(decoded_response)
-    Error(err) -> {
-      Error(errors.ParseError(
-        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
-      ))
-    }
-  }
+  decode_json(text, config_decoder())
 }
 
 fn oauth_token_decoder() -> decode.Decoder(types.OauthToken) {
@@ -166,6 +133,19 @@ fn value_decoder() -> decode.Decoder(types.TopHit) {
   }
 }
 
+fn add_tracks_to_playlist_decoder() -> decode.Decoder(
+  types.AddTracksToPlaylistResponse,
+) {
+  {
+    use last_updated <- decode.field("lastUpdated", decode.int)
+    use added_item_ids <- decode.field("addedItemIds", decode.list(decode.int))
+    decode.success(types.AddTracksToPlaylistResponse(
+      last_updated,
+      added_item_ids,
+    ))
+  }
+}
+
 fn config_decoder() -> decode.Decoder(types.Config) {
   {
     use client_id <- decode.field("client_id", decode.string)
@@ -180,5 +160,18 @@ fn config_decoder() -> decode.Decoder(types.Config) {
       http_client: option.None,
       session_id: "",
     ))
+  }
+}
+
+fn decode_json(
+  text: String,
+  decoder: decode.Decoder(a),
+) -> Result(a, errors.TidalAPIError) {
+  case json.parse(from: text, using: decoder) {
+    Ok(decoded_response) -> Ok(decoded_response)
+    Error(err) ->
+      Error(errors.ParseError(
+        "Failed to parse json: " <> tidal_ai_playlist_json.error_to_string(err),
+      ))
   }
 }

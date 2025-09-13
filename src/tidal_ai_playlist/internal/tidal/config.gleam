@@ -57,3 +57,10 @@ pub fn add_access_token(
 pub fn add_user_id(config: types.Config, user_id: Int) -> types.Config {
   types.Config(..config, user_id: option.Some(user_id))
 }
+
+pub fn add_http_client(
+  config: types.Config,
+  client: http.Client,
+) -> types.Config {
+  types.Config(..config, http_client: option.Some(client))
+}

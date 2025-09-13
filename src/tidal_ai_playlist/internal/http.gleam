@@ -1,5 +1,6 @@
 import gleam/http/request
 import gleam/httpc
+import gleam/io
 import gleam/list
 import gleam/result
 import tidal_ai_playlist/internal/errors
@@ -28,6 +29,7 @@ pub fn default_client(
     |> httpc.dispatch(req)
   case response {
     Ok(resp) -> {
+      io.println(resp.body)
       let etag =
         list.find_map(resp.headers, fn(pair) {
           let #(header, value) = pair

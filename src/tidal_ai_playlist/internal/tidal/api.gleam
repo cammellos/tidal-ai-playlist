@@ -149,7 +149,7 @@ pub fn add_tracks_to_playlist(
   playlist_id: String,
   song_ids: List(Int),
   etag: String,
-) -> Result(String, errors.TidalAPIError) {
+) -> Result(types.AddTracksToPlaylistResponse, errors.TidalAPIError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
   use access_token <- result.try(tidal_ai_playlist_option.from_option(
     config.access_token,
@@ -165,7 +165,7 @@ pub fn add_tracks_to_playlist(
       config.session_id,
     ))
   {
-    Ok(response) -> Ok(response.body)
+    Ok(response) -> decoders.decode_add_tracks_to_playlist(response.body)
     Error(err) -> Error(err)
   }
 }
