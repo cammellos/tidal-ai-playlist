@@ -31,7 +31,6 @@ pub fn default_client(
     |> httpc.dispatch(req)
   case response {
     Ok(resp) -> {
-      io.println(resp.body)
       let etag =
         list.find_map(resp.headers, fn(pair) {
           let #(header, value) = pair

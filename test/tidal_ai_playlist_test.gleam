@@ -25,7 +25,7 @@ pub fn run_test() {
     |> actor.start
 
   let dependencies =
-    tidal_ai_playlist.Dependencies(
+    types.Dependencies(
       get_env_fn: get_env_fn,
       http_client: http_client(http_actor),
       input_fn: get_input_fn(input_actor),
