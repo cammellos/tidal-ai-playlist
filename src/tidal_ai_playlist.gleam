@@ -1,4 +1,3 @@
-import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option
@@ -101,7 +100,7 @@ pub fn run(
     config,
     dependencies,
   ))
-  create_tidal_playlist_from_openai(config, playlist, dependencies)
+  create_tidal_playlist_from_openai(config, playlist)
 }
 
 fn default_config(
@@ -122,7 +121,6 @@ fn default_config(
 pub fn create_tidal_playlist_from_openai(
   config: config.Config,
   playlist: types.Playlist,
-  dependencies: types.Dependencies,
 ) -> Result(types.Playlist, errors.TidalAIPlaylistError) {
   let tidal_config = config.tidal_config
   use new_playlist <- result.try(tidal_api.create_playlist(

@@ -1,6 +1,5 @@
 import gleam/http/request
 import gleam/httpc
-import gleam/io
 import gleam/list
 import gleam/result
 
