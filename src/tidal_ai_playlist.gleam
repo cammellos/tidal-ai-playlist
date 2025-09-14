@@ -20,6 +20,8 @@ import tidal_ai_playlist/internal/tidal/config as tidal_config
 import tidal_ai_playlist/internal/tidal/types as tidal_types
 import tidal_ai_playlist/internal/types
 
+const prompt = "> "
+
 const instructions = "You are a music recommendation assistant.
 
 Given the user's input, create a playlist as instructed. Include only artist and song title, tab-separated (TSV format).
@@ -109,8 +111,8 @@ pub fn run(
 ) -> Result(types.Playlist, errors.TidalAIPlaylistError) {
   use config <- result.try(default_config(dependencies))
 
-  dependencies.output_fn("What music would you like to listen to today?")
-  let assert Ok(first_prompt) = dependencies.input_fn("> ")
+  let assert Ok(first_prompt) =
+    ask_user(dependencies, "What music would you like to listen to today?")
 
   use playlist <- result.try(interactive_loop(
     config,
@@ -133,7 +135,6 @@ fn default_config(
     openai_config: openai_built_config
       |> openai_config.add_http_client(dependencies.http_client),
     tidal_config: tidal_config,
-    input_fn: dependencies.input_fn,
   ))
 }
 
@@ -144,6 +145,11 @@ fn max_number_of_retries(
     3 -> Error(errors.MaxNumberOfOpenAIRetries)
     _ -> Ok(types.Playlist(songs: [], title: "", description: ""))
   }
+}
+
+fn ask_user(dependencies: Dependencies, question) -> Result(String, Nil) {
+  dependencies.output_fn(question)
+  dependencies.input_fn(prompt)
 }
 
 fn interactive_loop(
@@ -186,19 +192,22 @@ fn interactive_loop(
           })
 
           dependencies.output_fn("\nGenerate this playlist? (y/n)")
-          let assert Ok(ans) = config.input_fn("> ")
+          let assert Ok(ans) =
+            ask_user(dependencies, "\nGenerate this playlist? (y/n)")
           let trimmed = string.trim(ans)
 
           case trimmed {
             "y" -> {
-              dependencies.output_fn(
-                "What would you like to name the playlist?",
-              )
-              let assert Ok(title) = config.input_fn("> ")
-              dependencies.output_fn(
-                "What would you like to set for the description?",
-              )
-              let assert Ok(description) = config.input_fn("> ")
+              let assert Ok(title) =
+                ask_user(
+                  dependencies,
+                  "What would you like to name the playlist?",
+                )
+              let assert Ok(description) =
+                ask_user(
+                  dependencies,
+                  "What would you like to set for the description?",
+                )
 
               Ok(types.Playlist(
                 songs: songs,
@@ -208,8 +217,8 @@ fn interactive_loop(
             }
 
             _ -> {
-              dependencies.output_fn("What would you like changed?")
-              let assert Ok(new_prompt) = config.input_fn("> ")
+              let assert Ok(new_prompt) =
+                ask_user(dependencies, "What would you like changed?")
               let new_messages =
                 list.append(messages, [
                   openai_types.ResponsesInput("assistant", reply),
