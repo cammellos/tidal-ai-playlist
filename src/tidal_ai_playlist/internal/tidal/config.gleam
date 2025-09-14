@@ -2,7 +2,6 @@ import gleam/json
 import gleam/option
 import gleam/result
 
-import envoy
 import simplifile
 import youid/uuid
 
@@ -19,26 +18,31 @@ pub fn new(client_id: String, client_secret: String) -> types.Config {
     session_id: uuid.v4_string(),
     user_id: option.None,
     refresh_token: option.None,
+    output_fn: option.None,
     access_token: option.None,
     http_client: option.None,
   )
 }
 
-pub fn from_env() -> Result(types.Config, errors.TidalAIPlaylistError) {
-  let client_id_result = envoy.get("TIDAL_CLIENT_ID")
-  let client_secret_result = envoy.get("TIDAL_CLIENT_SECRET")
+pub fn from_env(
+  get_env_fn: fn(String) -> Result(String, Nil),
+) -> Result(types.Config, errors.TidalAIPlaylistError) {
+  let client_id_result = get_env_fn("TIDAL_CLIENT_ID")
+  let client_secret_result = get_env_fn("TIDAL_CLIENT_SECRET")
 
-  case #(client_id_result, client_secret_result) {
-    #(Ok(client_id), Ok(client_secret)) -> Ok(new(client_id, client_secret))
-    _ -> Error(errors.TidalCredentialsMissing)
+  case client_id_result, client_secret_result {
+    Ok(client_id), Ok(client_secret) -> Ok(new(client_id, client_secret))
+    _, _ -> Error(errors.TidalCredentialsMissing)
   }
 }
 
-pub fn from_file(filepath: String) -> Result(types.Config, errors.TidalAIPlaylistError) {
+pub fn from_file(
+  filepath: String,
+) -> Result(types.Config, errors.TidalAIPlaylistError) {
   let file_result = simplifile.read(from: filepath)
   case file_result {
     Ok(config_json) -> decoders.decode_config(config_json)
-    Error(err) -> Error(errors.TidalReadingConfigError)
+    Error(_) -> Error(errors.TidalReadingConfigError)
   }
 }
 
@@ -87,6 +91,10 @@ pub fn add_access_token(
 
 pub fn add_user_id(config: types.Config, user_id: Int) -> types.Config {
   types.Config(..config, user_id: option.Some(user_id))
+}
+
+pub fn add_output_fn(config: types.Config, output_fn: fn(String) -> Nil) {
+  types.Config(..config, output_fn: option.Some(output_fn))
 }
 
 pub fn add_http_client(

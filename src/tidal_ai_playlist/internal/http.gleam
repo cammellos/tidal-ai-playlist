@@ -3,10 +3,12 @@ import gleam/httpc
 import gleam/io
 import gleam/list
 import gleam/result
+
 import tidal_ai_playlist/internal/errors
 
 pub type Client =
-  fn(request.Request(String)) -> Result(HttpResponse, errors.TidalAIPlaylistError)
+  fn(request.Request(String)) ->
+    Result(HttpResponse, errors.TidalAIPlaylistError)
 
 pub fn error_to_string(error: httpc.HttpError) -> String {
   case error {

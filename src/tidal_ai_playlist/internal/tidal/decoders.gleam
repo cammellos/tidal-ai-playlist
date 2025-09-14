@@ -42,7 +42,9 @@ pub fn decode_add_tracks_to_playlist(
   decode_json(text, add_tracks_to_playlist_decoder())
 }
 
-pub fn decode_config(text: String) -> Result(types.Config, errors.TidalAIPlaylistError) {
+pub fn decode_config(
+  text: String,
+) -> Result(types.Config, errors.TidalAIPlaylistError) {
   decode_json(text, config_decoder())
 }
 
@@ -159,6 +161,7 @@ fn config_decoder() -> decode.Decoder(types.Config) {
       access_token: option.None,
       user_id: option.Some(user_id),
       http_client: option.None,
+      output_fn: option.None,
       session_id: "",
     ))
   }

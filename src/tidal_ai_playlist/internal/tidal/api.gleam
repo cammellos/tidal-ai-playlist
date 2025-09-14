@@ -6,7 +6,6 @@ import gleam/result
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http
 import tidal_ai_playlist/internal/option as tidal_ai_playlist_option
-import tidal_ai_playlist/internal/tidal/config
 import tidal_ai_playlist/internal/tidal/decoders
 import tidal_ai_playlist/internal/tidal/http as tidal_http
 import tidal_ai_playlist/internal/tidal/types
@@ -15,12 +14,13 @@ pub fn login(
   config: types.Config,
 ) -> Result(types.OauthToken, errors.TidalAIPlaylistError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
+  let output_fn = option.unwrap(config.output_fn, io.println)
   case authorize_device(config) {
     Ok(device_authorization_response) -> {
-      io.println(
+      output_fn(
         "authorization code: " <> device_authorization_response.user_code,
       )
-      io.println(
+      output_fn(
         "Please login at: "
         <> device_authorization_response.verification_uri
         <> " and paste the code above.",

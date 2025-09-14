@@ -1,7 +1,5 @@
 import gleam/option
 
-import envoy
-
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http
 
@@ -30,8 +28,11 @@ pub fn model_to_string(model: Model) -> String {
   }
 }
 
-pub fn from_env(instructions) -> Result(Config, errors.TidalAIPlaylistError) {
-  case envoy.get("OPENAI_API_KEY") {
+pub fn from_env(
+  instructions,
+  get_env_fn: fn(String) -> Result(String, Nil),
+) -> Result(Config, errors.TidalAIPlaylistError) {
+  case get_env_fn("OPENAI_API_KEY") {
     Ok(openai_api_key) ->
       Ok(Config(
         model: Gpt4o,
@@ -41,4 +42,8 @@ pub fn from_env(instructions) -> Result(Config, errors.TidalAIPlaylistError) {
       ))
     _ -> Error(errors.OpenAICredentialsMissing)
   }
+}
+
+pub fn add_http_client(config, client: http.Client) -> Config {
+  Config(..config, http_client: option.Some(client))
 }

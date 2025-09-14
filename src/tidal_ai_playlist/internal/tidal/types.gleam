@@ -50,5 +50,6 @@ pub type Config {
     access_token: option.Option(String),
     session_id: String,
     http_client: option.Option(http.Client),
+    output_fn: option.Option(fn(String) -> Nil),
   )
 }

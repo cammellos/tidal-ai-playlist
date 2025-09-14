@@ -13,6 +13,7 @@ pub type TidalAIPlaylistError {
   TidalCredentialsMissing
   TidalReadingConfigError
   TidalWritingConfigError
+  MaxNumberOfOpenAIRetries
   OpenAICredentialsMissing
   OtherError(String)
 }
@@ -36,5 +37,6 @@ pub fn print_error(err: TidalAIPlaylistError) {
     TidalReadingConfigError -> io.println("Error reading credentials file")
     TidalWritingConfigError -> io.println("Error writing credentials file")
     OpenAICredentialsMissing -> io.println("OpenAI credentials missing")
+    MaxNumberOfOpenAIRetries -> io.println("max number of openai retries")
   }
 }
