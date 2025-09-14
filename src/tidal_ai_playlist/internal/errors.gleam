@@ -1,6 +1,6 @@
 import gleam/io
 
-pub type TidalAPIError {
+pub type TidalAIPlaylistError {
   HttpError(String)
   ParseError(String)
   UnexpectedResponseFormatError(String)
@@ -17,7 +17,7 @@ pub type TidalAPIError {
   OtherError(String)
 }
 
-pub fn print_error(err: TidalAPIError) {
+pub fn print_error(err: TidalAIPlaylistError) {
   case err {
     HttpError(reason) -> io.println("Http Error: " <> reason)
     ParseError(reason) -> io.println("Parse Error: " <> reason)

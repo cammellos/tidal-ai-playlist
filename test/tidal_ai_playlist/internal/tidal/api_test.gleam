@@ -16,7 +16,7 @@ pub fn login_error_test() {
 
   let client = fn(req: request.Request(String)) -> Result(
     http.HttpResponse,
-    errors.TidalAPIError,
+    errors.TidalAIPlaylistError,
   ) {
     case req.path {
       "/v1/oauth2/device_authorization" ->

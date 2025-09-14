@@ -30,7 +30,7 @@ pub fn model_to_string(model: Model) -> String {
   }
 }
 
-pub fn from_env(instructions) -> Result(Config, errors.TidalAPIError) {
+pub fn from_env(instructions) -> Result(Config, errors.TidalAIPlaylistError) {
   case envoy.get("OPENAI_API_KEY") {
     Ok(openai_api_key) ->
       Ok(Config(

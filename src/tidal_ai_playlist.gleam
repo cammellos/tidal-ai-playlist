@@ -39,7 +39,7 @@ pub fn start(config: option.Option(config.Config)) {
   Nil
 }
 
-fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAPIError) {
+fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAIPlaylistError) {
   let filepath_result = envoy.get("TIDAL_AI_PLAYLIST_CONFIG")
 
   use config <- result.try(case filepath_result {
@@ -89,7 +89,7 @@ fn load_tidal_config() -> Result(tidal_types.Config, errors.TidalAPIError) {
 
 pub fn interactive_playlist(
   config: option.Option(config.Config),
-) -> Result(Nil, errors.TidalAPIError) {
+) -> Result(Nil, errors.TidalAIPlaylistError) {
   use config <- result.try(case config {
     option.Some(config) -> Ok(config)
     option.None -> default_config()
@@ -103,7 +103,7 @@ pub fn interactive_playlist(
   create_tidal_playlist_from_openai(config, playlist)
 }
 
-fn default_config() -> Result(config.Config, errors.TidalAPIError) {
+fn default_config() -> Result(config.Config, errors.TidalAIPlaylistError) {
   use openai_config <- result.try(openai_config.from_env(instructions))
   use tidal_config <- result.try(load_tidal_config())
   Ok(config.Config(openai_config: openai_config, tidal_config: tidal_config))
@@ -112,7 +112,7 @@ fn default_config() -> Result(config.Config, errors.TidalAPIError) {
 fn interactive_loop(
   config: config.Config,
   messages: List(openai_types.ResponsesInput),
-) -> Result(types.Playlist, errors.TidalAPIError) {
+) -> Result(types.Playlist, errors.TidalAIPlaylistError) {
   case openai_api.ask(messages, config.openai_config) {
     Ok(reply) -> {
       io.println("\nProposed Playlist:\n")
@@ -160,7 +160,7 @@ fn interactive_loop(
 pub fn create_tidal_playlist_from_openai(
   config: config.Config,
   playlist: types.Playlist,
-) -> Result(Nil, errors.TidalAPIError) {
+) -> Result(Nil, errors.TidalAIPlaylistError) {
   let tidal_config = config.tidal_config
   use new_playlist <- result.try(tidal_api.create_playlist(
     tidal_config,

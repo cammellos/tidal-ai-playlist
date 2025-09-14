@@ -7,7 +7,7 @@ import tidal_ai_playlist/internal/openai/types
 
 pub fn decode_response(
   body: String,
-) -> Result(types.Response, errors.TidalAPIError) {
+) -> Result(types.Response, errors.TidalAIPlaylistError) {
   case json.parse(from: body, using: response_decoder()) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->

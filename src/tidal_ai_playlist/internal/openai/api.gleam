@@ -11,7 +11,7 @@ import tidal_ai_playlist/internal/openai/types
 pub fn responses(
   input: List(types.ResponsesInput),
   config: config.Config,
-) -> Result(types.Response, errors.TidalAPIError) {
+) -> Result(types.Response, errors.TidalAIPlaylistError) {
   let http_client = option.unwrap(config.http_client, http.default_client)
   let req = openai_http.build_request(input, config)
   case http_client(req) {
@@ -23,14 +23,14 @@ pub fn responses(
 pub fn ask(
   input: List(types.ResponsesInput),
   config: config.Config,
-) -> Result(String, errors.TidalAPIError) {
+) -> Result(String, errors.TidalAIPlaylistError) {
   use response <- result.try(responses(input, config))
   extract_text(response)
 }
 
 fn extract_text(
   response: types.Response,
-) -> Result(String, errors.TidalAPIError) {
+) -> Result(String, errors.TidalAIPlaylistError) {
   case response {
     types.Response(_, [types.Output(_, [types.Content(text), ..]), ..]) ->
       Ok(text)

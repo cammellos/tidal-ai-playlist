@@ -24,7 +24,7 @@ pub fn new(client_id: String, client_secret: String) -> types.Config {
   )
 }
 
-pub fn from_env() -> Result(types.Config, errors.TidalAPIError) {
+pub fn from_env() -> Result(types.Config, errors.TidalAIPlaylistError) {
   let client_id_result = envoy.get("TIDAL_CLIENT_ID")
   let client_secret_result = envoy.get("TIDAL_CLIENT_SECRET")
 
@@ -34,7 +34,7 @@ pub fn from_env() -> Result(types.Config, errors.TidalAPIError) {
   }
 }
 
-pub fn from_file(filepath: String) -> Result(types.Config, errors.TidalAPIError) {
+pub fn from_file(filepath: String) -> Result(types.Config, errors.TidalAIPlaylistError) {
   let file_result = simplifile.read(from: filepath)
   case file_result {
     Ok(config_json) -> decoders.decode_config(config_json)
@@ -45,7 +45,7 @@ pub fn from_file(filepath: String) -> Result(types.Config, errors.TidalAPIError)
 pub fn to_file(
   config: types.Config,
   filepath: String,
-) -> Result(types.Config, errors.TidalAPIError) {
+) -> Result(types.Config, errors.TidalAIPlaylistError) {
   use refresh_token <- result.try(tidal_ai_playlist_option.from_option(
     config.refresh_token,
     errors.TidalCredentialsMissing,

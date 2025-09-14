@@ -8,41 +8,41 @@ import tidal_ai_playlist/internal/tidal/types
 
 pub fn decode_device_authorization_response(
   body: String,
-) -> Result(types.DeviceAuthorizationResponse, errors.TidalAPIError) {
+) -> Result(types.DeviceAuthorizationResponse, errors.TidalAIPlaylistError) {
   decode_json(body, device_authorization_decoder())
 }
 
 pub fn decode_oauth_token_response(
   body: String,
-) -> Result(types.OauthToken, errors.TidalAPIError) {
+) -> Result(types.OauthToken, errors.TidalAIPlaylistError) {
   decode_json(body, oauth_token_decoder())
 }
 
 pub fn decode_refresh_token_response(
   body: String,
-) -> Result(types.RefreshTokenResponse, errors.TidalAPIError) {
+) -> Result(types.RefreshTokenResponse, errors.TidalAIPlaylistError) {
   decode_json(body, refresh_token_response_decoder())
 }
 
 pub fn decode_create_playlist_response(
   body: String,
-) -> Result(types.CreatePlaylistResponse, errors.TidalAPIError) {
+) -> Result(types.CreatePlaylistResponse, errors.TidalAIPlaylistError) {
   decode_json(body, create_playlist_response_decoder())
 }
 
 pub fn decode_search_track_response(
   body: String,
-) -> Result(types.SearchTrackResponse, errors.TidalAPIError) {
+) -> Result(types.SearchTrackResponse, errors.TidalAIPlaylistError) {
   decode_json(body, search_track_response_decoder())
 }
 
 pub fn decode_add_tracks_to_playlist(
   text: String,
-) -> Result(types.AddTracksToPlaylistResponse, errors.TidalAPIError) {
+) -> Result(types.AddTracksToPlaylistResponse, errors.TidalAIPlaylistError) {
   decode_json(text, add_tracks_to_playlist_decoder())
 }
 
-pub fn decode_config(text: String) -> Result(types.Config, errors.TidalAPIError) {
+pub fn decode_config(text: String) -> Result(types.Config, errors.TidalAIPlaylistError) {
   decode_json(text, config_decoder())
 }
 
@@ -167,7 +167,7 @@ fn config_decoder() -> decode.Decoder(types.Config) {
 fn decode_json(
   text: String,
   decoder: decode.Decoder(a),
-) -> Result(a, errors.TidalAPIError) {
+) -> Result(a, errors.TidalAIPlaylistError) {
   case json.parse(from: text, using: decoder) {
     Ok(decoded_response) -> Ok(decoded_response)
     Error(err) ->
