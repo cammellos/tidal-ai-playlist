@@ -1,3 +1,4 @@
+import gleam/int
 import gleam/io
 
 pub type TidalAIPlaylistError {
@@ -16,27 +17,33 @@ pub type TidalAIPlaylistError {
   MaxNumberOfOpenAIRetries
   OpenAICredentialsMissing
   OtherError(String)
+  TidalApiError(status: Int, body: String)
 }
 
 pub fn print_error(err: TidalAIPlaylistError) {
+  io.println(error_to_string(err))
+}
+
+pub fn error_to_string(err: TidalAIPlaylistError) -> String {
   case err {
-    HttpError(reason) -> io.println("Http Error: " <> reason)
-    ParseError(reason) -> io.println("Parse Error: " <> reason)
-    TidalDeviceAuthorizationNotReady ->
-      io.println("Tidal device authorization not ready")
-    OtherError(reason) -> io.println("Other Error: " <> reason)
+    HttpError(reason) -> "Http Error: " <> reason
+    ParseError(reason) -> "Parse Error: " <> reason
+    TidalDeviceAuthorizationNotReady -> "Tidal device authorization not ready"
+    OtherError(reason) -> "Other Error: " <> reason
     UnexpectedResponseFormatError(reason) ->
-      io.println("Unexpected response error: " <> reason)
-    TidalDeviceAuthorizationExpiredError ->
-      io.println("Device Authorization Expired")
-    TidalRefreshTokenMissing -> io.println("Tidal refresh token missing")
-    TidalAccessTokenMissing -> io.println("Tidal access token missing")
-    TidalSessionIdMissing -> io.println("Tidal session-id missing")
-    TidalUserIdMissing -> io.println("Tidal user-id missing")
-    TidalCredentialsMissing -> io.println("Tidal credentials missing")
-    TidalReadingConfigError -> io.println("Error reading credentials file")
-    TidalWritingConfigError -> io.println("Error writing credentials file")
-    OpenAICredentialsMissing -> io.println("OpenAI credentials missing")
-    MaxNumberOfOpenAIRetries -> io.println("max number of openai retries")
+      "Unexpected response error: " <> reason
+    TidalDeviceAuthorizationExpiredError -> "Device Authorization Expired"
+    TidalRefreshTokenMissing ->
+      "Tidal refresh token missing (set TIDAL_REFRESH_TOKEN and TIDAL_USER_ID, or run `login`)"
+    TidalAccessTokenMissing -> "Tidal access token missing"
+    TidalSessionIdMissing -> "Tidal session-id missing"
+    TidalUserIdMissing -> "Tidal user-id missing"
+    TidalCredentialsMissing -> "Tidal credentials missing"
+    TidalReadingConfigError -> "Error reading credentials file"
+    TidalWritingConfigError -> "Error writing credentials file"
+    OpenAICredentialsMissing -> "OpenAI credentials missing"
+    MaxNumberOfOpenAIRetries -> "max number of openai retries"
+    TidalApiError(status, body) ->
+      "Tidal API returned " <> int.to_string(status) <> ": " <> body
   }
 }

@@ -1,4 +1,5 @@
 import gleam/erlang/process
+import gleam/http/request
 import gleam/io
 import gleam/option
 import gleam/result
@@ -150,24 +151,18 @@ pub fn add_tracks_to_playlist(
   song_ids: List(Int),
   etag: String,
 ) -> Result(types.AddTracksToPlaylistResponse, errors.TidalAIPlaylistError) {
-  let http_client = option.unwrap(config.http_client, http.default_client)
-  use access_token <- result.try(tidal_ai_playlist_option.from_option(
-    config.access_token,
-    errors.TidalAccessTokenMissing,
-  ))
-
-  case
-    http_client(tidal_http.add_tracks_to_playlist(
+  use access_token <- result.try(access_token(config))
+  get(
+    config,
+    tidal_http.add_tracks_to_playlist(
       playlist_id,
       song_ids,
       access_token,
       etag,
       config.session_id,
-    ))
-  {
-    Ok(response) -> decoders.decode_add_tracks_to_playlist(response.body)
-    Error(err) -> Error(err)
-  }
+    ),
+    decoders.decode_add_tracks_to_playlist,
+  )
 }
 
 fn poll_device_authorization(
@@ -196,4 +191,162 @@ fn poll_device_authorization(
       }
     }
   }
+}
+
+pub fn search_tracks(
+  config: types.Config,
+  query: String,
+  limit: Int,
+) -> Result(types.Paged(types.Track), errors.TidalAIPlaylistError) {
+  use access_token <- result.try(access_token(config))
+  get(
+    config,
+    tidal_http.search_tracks(query, limit, access_token, config.session_id),
+    decoders.decode_search_tracks_response,
+  )
+}
+
+pub fn list_playlists(
+  config: types.Config,
+  limit: Int,
+  offset: Int,
+) -> Result(types.Paged(types.PlaylistSummary), errors.TidalAIPlaylistError) {
+  use access_token <- result.try(access_token(config))
+  use user_id <- result.try(user_id(config))
+  get(
+    config,
+    tidal_http.user_playlists(user_id, limit, offset, access_token),
+    decoders.decode_playlists_response,
+  )
+}
+
+pub fn playlist_tracks(
+  config: types.Config,
+  playlist_id: String,
+  limit: Int,
+  offset: Int,
+) -> Result(types.Paged(types.Track), errors.TidalAIPlaylistError) {
+  use access_token <- result.try(access_token(config))
+  get(
+    config,
+    tidal_http.playlist_items(playlist_id, limit, offset, access_token),
+    decoders.decode_playlist_items_response,
+  )
+}
+
+/// The playlist's current ETag, which Tidal requires when changing it.
+pub fn playlist_etag(
+  config: types.Config,
+  playlist_id: String,
+) -> Result(String, errors.TidalAIPlaylistError) {
+  use access_token <- result.try(access_token(config))
+  use response <- result.map(send(
+    config,
+    tidal_http.playlist(playlist_id, access_token),
+  ))
+  response.etag
+}
+
+pub fn favorite_tracks(
+  config: types.Config,
+  limit: Int,
+  offset: Int,
+) -> Result(
+  types.Paged(types.Favorite(types.Track)),
+  errors.TidalAIPlaylistError,
+) {
+  favorites(
+    config,
+    "tracks",
+    limit,
+    offset,
+    decoders.decode_favorite_tracks_response,
+  )
+}
+
+pub fn favorite_albums(
+  config: types.Config,
+  limit: Int,
+  offset: Int,
+) -> Result(
+  types.Paged(types.Favorite(types.Album)),
+  errors.TidalAIPlaylistError,
+) {
+  favorites(
+    config,
+    "albums",
+    limit,
+    offset,
+    decoders.decode_favorite_albums_response,
+  )
+}
+
+pub fn favorite_artists(
+  config: types.Config,
+  limit: Int,
+  offset: Int,
+) -> Result(
+  types.Paged(types.Favorite(types.Artist)),
+  errors.TidalAIPlaylistError,
+) {
+  favorites(
+    config,
+    "artists",
+    limit,
+    offset,
+    decoders.decode_favorite_artists_response,
+  )
+}
+
+fn favorites(
+  config: types.Config,
+  kind: String,
+  limit: Int,
+  offset: Int,
+  decode: fn(String) -> Result(a, errors.TidalAIPlaylistError),
+) -> Result(a, errors.TidalAIPlaylistError) {
+  use access_token <- result.try(access_token(config))
+  use user_id <- result.try(user_id(config))
+  get(
+    config,
+    tidal_http.favorites(user_id, kind, limit, offset, access_token),
+    decode,
+  )
+}
+
+fn get(
+  config: types.Config,
+  req: request.Request(String),
+  decode: fn(String) -> Result(a, errors.TidalAIPlaylistError),
+) -> Result(a, errors.TidalAIPlaylistError) {
+  use response <- result.try(send(config, req))
+  decode(response.body)
+}
+
+fn send(
+  config: types.Config,
+  req: request.Request(String),
+) -> Result(http.HttpResponse, errors.TidalAIPlaylistError) {
+  let http_client = option.unwrap(config.http_client, http.default_client)
+  use response <- result.try(http_client(req))
+  case response.status {
+    200 -> Ok(response)
+    status -> Error(errors.TidalApiError(status, response.body))
+  }
+}
+
+fn access_token(
+  config: types.Config,
+) -> Result(String, errors.TidalAIPlaylistError) {
+  tidal_ai_playlist_option.from_option(
+    config.access_token,
+    errors.TidalAccessTokenMissing,
+  )
+}
+
+fn user_id(config: types.Config) -> Result(Int, errors.TidalAIPlaylistError) {
+  tidal_ai_playlist_option.from_option(
+    config.user_id,
+    errors.TidalUserIdMissing,
+  )
 }

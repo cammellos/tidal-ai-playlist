@@ -1,6 +1,8 @@
+import gleam/int
 import gleam/json
 import gleam/option
 import gleam/result
+import gleam/string
 
 import simplifile
 import youid/uuid
@@ -31,8 +33,27 @@ pub fn from_env(
   let client_secret_result = get_env_fn("TIDAL_CLIENT_SECRET")
 
   case client_id_result, client_secret_result {
-    Ok(client_id), Ok(client_secret) -> Ok(new(client_id, client_secret))
+    Ok(client_id), Ok(client_secret) ->
+      Ok(add_login_from_env(new(client_id, client_secret), get_env_fn))
     _, _ -> Error(errors.TidalCredentialsMissing)
+  }
+}
+
+// A login saved by `tidal-ai-playlist login`, passed in through the environment
+// (e.g. from sops) so no writable config file is needed. Both must be set.
+fn add_login_from_env(
+  config: types.Config,
+  get_env_fn: fn(String) -> Result(String, Nil),
+) -> types.Config {
+  let user_id_result =
+    get_env_fn("TIDAL_USER_ID")
+    |> result.try(fn(user_id) { int.parse(string.trim(user_id)) })
+  case get_env_fn("TIDAL_REFRESH_TOKEN"), user_id_result {
+    Ok(refresh_token), Ok(user_id) ->
+      config
+      |> add_refresh_token(string.trim(refresh_token))
+      |> add_user_id(user_id)
+    _, _ -> config
   }
 }
 

@@ -15,6 +15,8 @@ const device_authorization_path = "/v1/oauth2/device_authorization"
 
 const search_path = "/v1/search"
 
+const country_code = "GB"
+
 const scope = "r_usr w_usr w_sub"
 
 const device_code_grant_type = "urn:ietf:params:oauth:grant-type:device_code"
@@ -106,20 +108,87 @@ pub fn search_track(
   access_token: String,
   session_id: String,
 ) -> request.Request(String) {
-  let query = [
-    #("query", artist <> " " <> song),
-    #("limit", "50"),
+  search_tracks(artist <> " " <> song, 50, access_token, session_id)
+}
+
+pub fn search_tracks(
+  query: String,
+  limit: Int,
+  access_token: String,
+  session_id: String,
+) -> request.Request(String) {
+  authorized_get(search_path, access_token, [
+    #("query", query),
+    #("limit", int.to_string(limit)),
     #("offset", "0"),
     #("types", "TRACKS"),
     #("sessionId", session_id),
-    #("countryCode", "GB"),
-  ]
+  ])
+}
+
+pub fn user_playlists(
+  user_id: Int,
+  limit: Int,
+  offset: Int,
+  access_token: String,
+) -> request.Request(String) {
+  authorized_get(build_playlist_path(user_id), access_token, [
+    #("limit", int.to_string(limit)),
+    #("offset", int.to_string(offset)),
+    #("order", "DATE"),
+    #("orderDirection", "DESC"),
+  ])
+}
+
+pub fn playlist(
+  playlist_id: String,
+  access_token: String,
+) -> request.Request(String) {
+  authorized_get("/v1/playlists/" <> playlist_id, access_token, [])
+}
+
+pub fn playlist_items(
+  playlist_id: String,
+  limit: Int,
+  offset: Int,
+  access_token: String,
+) -> request.Request(String) {
+  authorized_get(build_playlist_items_path(playlist_id), access_token, [
+    #("limit", int.to_string(limit)),
+    #("offset", int.to_string(offset)),
+  ])
+}
+
+/// `kind` is the path segment: "tracks", "albums" or "artists".
+pub fn favorites(
+  user_id: Int,
+  kind: String,
+  limit: Int,
+  offset: Int,
+  access_token: String,
+) -> request.Request(String) {
+  authorized_get(
+    "/v1/users/" <> int.to_string(user_id) <> "/favorites/" <> kind,
+    access_token,
+    [
+      #("limit", int.to_string(limit)),
+      #("offset", int.to_string(offset)),
+      #("order", "DATE"),
+      #("orderDirection", "DESC"),
+    ],
+  )
+}
+
+fn authorized_get(
+  path: String,
+  access_token: String,
+  query: List(#(String, String)),
+) -> request.Request(String) {
   base_api_client()
-  |> request.set_path(search_path)
+  |> request.set_path(path)
   |> request.set_method(http.Get)
   |> request.prepend_header("authorization", "Bearer " <> access_token)
-  |> request.prepend_header("Content-Type", "application/x-www-form-urlencoded")
-  |> request.set_query(query)
+  |> request.set_query(list.append(query, [#("countryCode", country_code)]))
 }
 
 pub fn add_tracks_to_playlist(

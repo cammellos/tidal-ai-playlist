@@ -53,3 +53,46 @@ pub type Config {
     output_fn: option.Option(fn(String) -> Nil),
   )
 }
+
+pub type Track {
+  Track(
+    id: Int,
+    title: String,
+    version: option.Option(String),
+    duration: Int,
+    artists: List(String),
+    album: option.Option(String),
+  )
+}
+
+pub type Album {
+  Album(
+    id: Int,
+    title: String,
+    artists: List(String),
+    release_date: option.Option(String),
+    number_of_tracks: Int,
+  )
+}
+
+pub type Artist {
+  Artist(id: Int, name: String)
+}
+
+pub type PlaylistSummary {
+  PlaylistSummary(
+    uuid: String,
+    title: String,
+    description: option.Option(String),
+    number_of_tracks: Int,
+    last_updated: String,
+  )
+}
+
+pub type Favorite(a) {
+  Favorite(item: a, added: String)
+}
+
+pub type Paged(a) {
+  Paged(items: List(a), total: Int, offset: Int, limit: Int)
+}

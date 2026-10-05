@@ -27,3 +27,13 @@ pub const responses_response = "
   ]
 }
 "
+
+pub const playlists_response = "{\"limit\":2,\"offset\":0,\"totalNumberOfItems\":22,\"items\":[{\"uuid\":\"pl-1\",\"title\":\"first\",\"description\":\"desc\",\"numberOfTracks\":4,\"lastUpdated\":\"2025-09-15T07:00:44.615+0000\",\"type\":\"USER\"},{\"uuid\":\"pl-2\",\"title\":\"second\",\"description\":null,\"numberOfTracks\":0,\"lastUpdated\":\"2025-09-14T07:00:44.615+0000\",\"type\":\"USER\"}]}"
+
+pub const playlist_items_response = "{\"limit\":3,\"offset\":0,\"totalNumberOfItems\":3,\"items\":[{\"type\":\"track\",\"cut\":null,\"item\":{\"id\":1,\"title\":\"Song One\",\"version\":null,\"duration\":386,\"artists\":[{\"id\":10,\"name\":\"Artist One\"}],\"album\":{\"id\":100,\"title\":\"Album One\"}}},{\"type\":\"video\",\"cut\":null,\"item\":{\"id\":2,\"title\":\"A Video\"}},{\"type\":\"track\",\"cut\":null,\"item\":{\"id\":3,\"title\":\"Song Three\",\"version\":\"Live\",\"duration\":200,\"artists\":[{\"id\":10,\"name\":\"Artist One\"},{\"id\":11,\"name\":\"Artist Two\"}],\"album\":null}}]}"
+
+pub const favorite_albums_response = "{\"limit\":1,\"offset\":0,\"totalNumberOfItems\":53,\"items\":[{\"created\":\"2025-01-07T09:38:40.596+0000\",\"item\":{\"id\":345,\"title\":\"2093\",\"artists\":[{\"id\":9,\"name\":\"Yeat\"}],\"releaseDate\":\"2024-02-16\",\"numberOfTracks\":22}}]}"
+
+pub const favorite_artists_response = "{\"limit\":1,\"offset\":0,\"totalNumberOfItems\":34,\"items\":[{\"created\":\"2026-03-12T11:50:45.889+0000\",\"item\":{\"id\":48,\"name\":\"Angine de Poitrine\"}}]}"
+
+pub const favorite_tracks_response = "{\"limit\":1,\"offset\":0,\"totalNumberOfItems\":5,\"items\":[{\"created\":\"2026-03-12T11:50:45.889+0000\",\"item\":{\"id\":367155064,\"title\":\"L'Aberek\",\"version\":null,\"duration\":270,\"artists\":[{\"id\":48,\"name\":\"Angine de Poitrine\"}],\"album\":{\"id\":7,\"title\":\"Vol.1\"}}}]}"

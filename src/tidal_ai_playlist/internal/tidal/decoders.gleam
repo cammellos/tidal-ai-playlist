@@ -1,6 +1,8 @@
 import gleam/dynamic/decode
 import gleam/json
+import gleam/list
 import gleam/option
+import gleam/result
 
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/json as tidal_ai_playlist_json
@@ -46,6 +48,56 @@ pub fn decode_config(
   text: String,
 ) -> Result(types.Config, errors.TidalAIPlaylistError) {
   decode_json(text, config_decoder())
+}
+
+pub fn decode_search_tracks_response(
+  body: String,
+) -> Result(types.Paged(types.Track), errors.TidalAIPlaylistError) {
+  decode_json(body, decode.at(["tracks"], paged_decoder(track_decoder())))
+}
+
+pub fn decode_playlists_response(
+  body: String,
+) -> Result(types.Paged(types.PlaylistSummary), errors.TidalAIPlaylistError) {
+  decode_json(body, paged_decoder(playlist_summary_decoder()))
+}
+
+/// Playlist items can be videos too; only tracks are kept.
+pub fn decode_playlist_items_response(
+  body: String,
+) -> Result(types.Paged(types.Track), errors.TidalAIPlaylistError) {
+  use paged <- result.map(decode_json(
+    body,
+    paged_decoder(playlist_item_decoder()),
+  ))
+  types.Paged(..paged, items: option.values(paged.items))
+}
+
+pub fn decode_favorite_tracks_response(
+  body: String,
+) -> Result(
+  types.Paged(types.Favorite(types.Track)),
+  errors.TidalAIPlaylistError,
+) {
+  decode_json(body, paged_decoder(favorite_decoder(track_decoder())))
+}
+
+pub fn decode_favorite_albums_response(
+  body: String,
+) -> Result(
+  types.Paged(types.Favorite(types.Album)),
+  errors.TidalAIPlaylistError,
+) {
+  decode_json(body, paged_decoder(favorite_decoder(album_decoder())))
+}
+
+pub fn decode_favorite_artists_response(
+  body: String,
+) -> Result(
+  types.Paged(types.Favorite(types.Artist)),
+  errors.TidalAIPlaylistError,
+) {
+  decode_json(body, paged_decoder(favorite_decoder(artist_decoder())))
 }
 
 fn oauth_token_decoder() -> decode.Decoder(types.OauthToken) {
@@ -165,6 +217,107 @@ fn config_decoder() -> decode.Decoder(types.Config) {
       session_id: "",
     ))
   }
+}
+
+fn paged_decoder(item: decode.Decoder(a)) -> decode.Decoder(types.Paged(a)) {
+  use items <- decode.field("items", decode.list(item))
+  use total <- decode.optional_field(
+    "totalNumberOfItems",
+    list.length(items),
+    decode.int,
+  )
+  use offset <- decode.optional_field("offset", 0, decode.int)
+  use limit <- decode.optional_field("limit", list.length(items), decode.int)
+  decode.success(types.Paged(items:, total:, offset:, limit:))
+}
+
+fn track_decoder() -> decode.Decoder(types.Track) {
+  use id <- decode.field("id", decode.int)
+  use title <- decode.field("title", decode.string)
+  use version <- decode.optional_field(
+    "version",
+    option.None,
+    decode.optional(decode.string),
+  )
+  use duration <- decode.optional_field("duration", 0, decode.int)
+  use artists <- decode.optional_field(
+    "artists",
+    [],
+    decode.list(decode.at(["name"], decode.string)),
+  )
+  use album <- decode.optional_field(
+    "album",
+    option.None,
+    decode.optional(decode.at(["title"], decode.string)),
+  )
+  decode.success(types.Track(id:, title:, version:, duration:, artists:, album:))
+}
+
+fn album_decoder() -> decode.Decoder(types.Album) {
+  use id <- decode.field("id", decode.int)
+  use title <- decode.field("title", decode.string)
+  use artists <- decode.optional_field(
+    "artists",
+    [],
+    decode.list(decode.at(["name"], decode.string)),
+  )
+  use release_date <- decode.optional_field(
+    "releaseDate",
+    option.None,
+    decode.optional(decode.string),
+  )
+  use number_of_tracks <- decode.optional_field("numberOfTracks", 0, decode.int)
+  decode.success(types.Album(
+    id:,
+    title:,
+    artists:,
+    release_date:,
+    number_of_tracks:,
+  ))
+}
+
+fn artist_decoder() -> decode.Decoder(types.Artist) {
+  use id <- decode.field("id", decode.int)
+  use name <- decode.field("name", decode.string)
+  decode.success(types.Artist(id:, name:))
+}
+
+fn playlist_summary_decoder() -> decode.Decoder(types.PlaylistSummary) {
+  use uuid <- decode.field("uuid", decode.string)
+  use title <- decode.field("title", decode.string)
+  use description <- decode.optional_field(
+    "description",
+    option.None,
+    decode.optional(decode.string),
+  )
+  use number_of_tracks <- decode.optional_field("numberOfTracks", 0, decode.int)
+  use last_updated <- decode.optional_field("lastUpdated", "", decode.string)
+  decode.success(types.PlaylistSummary(
+    uuid:,
+    title:,
+    description:,
+    number_of_tracks:,
+    last_updated:,
+  ))
+}
+
+fn playlist_item_decoder() -> decode.Decoder(option.Option(types.Track)) {
+  use item_type <- decode.field("type", decode.string)
+  case item_type {
+    "track" -> {
+      use track <- decode.field("item", track_decoder())
+      decode.success(option.Some(track))
+    }
+    _ -> decode.success(option.None)
+  }
+}
+
+fn favorite_decoder(
+  item: decode.Decoder(a),
+) -> decode.Decoder(types.Favorite(a)) {
+  use item <- decode.field("item", item)
+  use added <- decode.optional_field("created", "", decode.string)
+  decode.success(types.Favorite(item:, added:))
 }
 
 fn decode_json(

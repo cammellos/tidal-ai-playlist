@@ -3,6 +3,16 @@ import gleam/option
 import tidal_ai_playlist/internal/errors
 import tidal_ai_playlist/internal/http
 
+pub const playlist_instructions = "You are a music recommendation assistant.
+
+Given the user's input, create a playlist as instructed. Include only artist and song title, tab-separated (TSV format).
+
+Do not include markdown, commentary, or explanations.
+Wrap the playlist between exactly these separator lines:
+=====
+(playlist)
+====="
+
 pub type Config {
   Config(
     model: Model,
